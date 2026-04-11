@@ -1,6 +1,9 @@
 # Secrets
 .env
 
+# Dossiers internes (archives, brouillons, etc.)
+/_*/
+
 # OS
 .DS_Store
 

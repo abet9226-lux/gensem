@@ -86,6 +86,17 @@ gh repo create gse-one/gse-one --public --source=. --push
 
 ## 3. Publier le plugin
 
+La visibilite du plugin depend entierement de la methode de distribution choisie et de la visibilite du depot GitHub :
+
+| Methode | Visibilite | Pre-requis |
+|---------|-----------|------------|
+| A — Test local | Vous seul, sur votre machine | Aucun |
+| B — Distribution GitHub (repo prive) | Vous + collaborateurs invites sur le repo | Repo GitHub prive |
+| B — Distribution GitHub (repo public) | Toute personne ayant le lien | Repo GitHub public |
+| C — Marketplace officiel | Tout le monde (catalogue public) | Soumission et approbation par Anthropic/Cursor |
+
+> **Important :** Tant que le depot GitHub reste **prive**, personne ne peut voir le code ni installer le plugin sans avoir ete explicitement invite comme collaborateur. La methode B avec un repo prive est donc adaptee pour un usage personnel ou en equipe restreinte.
+
 ### Pour Claude Code
 
 #### Methode A — Test local
@@ -221,8 +232,11 @@ L'agent GSE-One doit repondre, detecter l'etat du projet et proposer l'activite 
 
 ## Versioning
 
+Voir [CHANGELOG.md](CHANGELOG.md) pour l'historique des versions.
+
+Pour publier une nouvelle version :
+
 1. Modifier la constante `VERSION` dans `gse_generate.py`
-2. Regenerer : `python3 gse_generate.py --clean --verify` (met a jour les 2 manifests automatiquement)
-3. Commit + tag : `git tag v0.8.1 && git push origin main --tags`
-4. Claude Code marketplace : mise a jour automatique pour les utilisateurs
-5. Cursor : les utilisateurs doivent reinstaller ou mettre a jour via le marketplace
+2. Regenerer : `python3 gse_generate.py --clean --verify`
+3. Mettre a jour `CHANGELOG.md`
+4. Commit + tag : `git tag vX.Y.Z && git push origin main --tags`

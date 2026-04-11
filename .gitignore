@@ -1,8 +1,11 @@
 # Secrets
 .env
 
-# Dossiers internes (archives, brouillons, etc.)
+# Internal directories (archives, drafts, etc.)
 /_*/
+
+# Personal notes
+notes.txt
 
 # OS
 .DS_Store

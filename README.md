@@ -1,76 +1,76 @@
-# GSE-One — Guide de publication du plugin
+# GSE-One — Plugin Publication Guide
 
-Ce dossier contient la specification (`gse-one-spec-v0.8.md`), le document de conception (`gse-one-implementation-design-v0.8.md`) et l'implementation complete du plugin (`gse-one/`).
+This repository contains the specification (`gse-one-spec-v0.8.md`), the design document (`gse-one-implementation-design-v0.8.md`) and the complete plugin implementation (`gse-one/`).
 
-Ce guide decrit toutes les etapes pour publier le plugin GSE-One et le rendre installable par les utilisateurs Claude Code et Cursor.
-
----
-
-## Table des matieres
-
-1. [Architecture mono-plugin](#1-architecture-mono-plugin)
-2. [Developper et generer](#2-developper-et-generer)
-3. [Publier le plugin](#3-publier-le-plugin)
-4. [Recapitulatif des commandes](#4-recapitulatif-des-commandes)
+This guide describes all the steps to publish the GSE-One plugin and make it installable by Claude Code and Cursor users.
 
 ---
 
-## 1. Architecture mono-plugin
+## Table of Contents
 
-GSE-One utilise un **seul dossier deployable** (`plugin/`) qui fonctionne sur les deux plateformes :
+1. [Mono-plugin Architecture](#1-mono-plugin-architecture)
+2. [Develop and Generate](#2-develop-and-generate)
+3. [Publish the Plugin](#3-publish-the-plugin)
+4. [Command Reference](#4-command-reference)
+
+---
+
+## 1. Mono-plugin Architecture
+
+GSE-One uses a **single deployable directory** (`plugin/`) that works on both platforms:
 
 ```
 gse-one/
-├── src/                              # Source unique de verite (62 fichiers)
-│   ├── principles/                   # 16 principes (P1-P16)
+├── src/                              # Single source of truth (62 files)
+│   ├── principles/                   # 16 principles (P1-P16)
 │   ├── activities/                   # 22 skills SKILL.md
-│   ├── agents/                       # 9 agents (8 specialises + orchestrateur)
+│   ├── agents/                       # 9 agents (8 specialized + orchestrator)
 │   └── templates/                    # 15 templates
 │
-├── plugin/                           # Dossier deployable (52 fichiers)
-│   ├── .claude-plugin/plugin.json    # Manifest Claude Code
-│   ├── .cursor-plugin/plugin.json    # Manifest Cursor
-│   ├── skills/                       # 22 skills (partages)
-│   ├── agents/                       # 9 agents (partages)
-│   ├── templates/                    # 15 templates (partages)
-│   ├── rules/000-gse-methodology.mdc # Cursor uniquement (ignore par Claude)
-│   ├── hooks/hooks.claude.json       # Format Claude Code
-│   ├── hooks/hooks.cursor.json       # Format Cursor
-│   └── settings.json                 # Claude uniquement (ignore par Cursor)
+├── plugin/                           # Deployable directory (52 files)
+│   ├── .claude-plugin/plugin.json    # Claude Code manifest
+│   ├── .cursor-plugin/plugin.json    # Cursor manifest
+│   ├── skills/                       # 22 skills (shared)
+│   ├── agents/                       # 9 agents (shared)
+│   ├── templates/                    # 15 templates (shared)
+│   ├── rules/000-gse-methodology.mdc # Cursor only (ignored by Claude)
+│   ├── hooks/hooks.claude.json       # Claude Code format
+│   ├── hooks/hooks.cursor.json       # Cursor format
+│   └── settings.json                 # Claude only (ignored by Cursor)
 │
 ├── marketplace/
 │   └── .claude-plugin/marketplace.json
 │
-└── gse_generate.py                   # Generateur: src/ → plugin/
+└── gse_generate.py                   # Generator: src/ → plugin/
 ```
 
-**Fichiers partages (46) :** skills, agents, templates — un seul exemplaire, zero divergence.
-**Fichiers specifiques (6) :** 2 manifests + 2 hooks + 1 settings + 1 .mdc — generes par paires equivalentes.
+**Shared files (46):** skills, agents, templates — single copy, zero divergence.
+**Platform-specific files (6):** 2 manifests + 2 hooks + 1 settings + 1 .mdc — generated as equivalent pairs.
 
 ---
 
-## 2. Developper et generer
+## 2. Develop and Generate
 
-### Modifier les sources
+### Edit the Sources
 
-Tous les changements se font dans `src/`. Ne jamais modifier `plugin/` directement — il est regenere.
+All changes are made in `src/`. Never modify `plugin/` directly — it is regenerated.
 
-### Regenerer le plugin
+### Regenerate the Plugin
 
-Apres toute modification :
+After any modification:
 
 ```bash
 cd gse-one/
 python3 gse_generate.py --clean --verify
 ```
 
-Le generateur :
-1. Copie les skills, agents specialises et templates (partages)
-2. Genere l'orchestrateur (`agents/gse-orchestrator.md`) et la regle Cursor (`rules/000-gse-methodology.mdc`) depuis la **meme source** — verifie que le corps est identique
-3. Genere les 2 hooks (Claude PascalCase / Cursor camelCase) depuis les memes commandes
-4. Genere les 2 manifests et `settings.json`
+The generator:
+1. Copies skills, specialized agents and templates (shared)
+2. Generates the orchestrator (`agents/gse-orchestrator.md`) and the Cursor rule (`rules/000-gse-methodology.mdc`) from the **same source** — verifies that the body is identical
+3. Generates the 2 hooks (Claude PascalCase / Cursor camelCase) from the same commands
+4. Generates the 2 manifests and `settings.json`
 
-### Creer le depot GitHub
+### Create the GitHub Repository
 
 ```bash
 cd gse-one/
@@ -80,36 +80,36 @@ git commit -m "feat: GSE-One v0.8.0 — initial release"
 gh repo create gse-one/gse-one --public --source=. --push
 ```
 
-> **Important :** Mettre a jour le champ `repository` dans `plugin/.claude-plugin/plugin.json`, `plugin/.cursor-plugin/plugin.json` et `marketplace/.claude-plugin/marketplace.json` avec l'URL reelle du depot.
+> **Important:** Update the `repository` field in `plugin/.claude-plugin/plugin.json`, `plugin/.cursor-plugin/plugin.json` and `marketplace/.claude-plugin/marketplace.json` with the actual repository URL.
 
 ---
 
-## 3. Publier le plugin
+## 3. Publish the Plugin
 
-La visibilite du plugin depend entierement de la methode de distribution choisie et de la visibilite du depot GitHub :
+Plugin visibility depends entirely on the distribution method chosen and the GitHub repository visibility:
 
-| Methode | Visibilite | Pre-requis |
-|---------|-----------|------------|
-| A — Test local | Vous seul, sur votre machine | Aucun |
-| B — Distribution GitHub (repo prive) | Vous + collaborateurs invites sur le repo | Repo GitHub prive |
-| B — Distribution GitHub (repo public) | Toute personne ayant le lien | Repo GitHub public |
-| C — Marketplace officiel | Tout le monde (catalogue public) | Soumission et approbation par Anthropic/Cursor |
+| Method | Visibility | Prerequisites |
+|--------|-----------|---------------|
+| A — Local test | You only, on your machine | None |
+| B — GitHub distribution (private repo) | You + invited collaborators | Private GitHub repo |
+| B — GitHub distribution (public repo) | Anyone with the link | Public GitHub repo |
+| C — Official marketplace | Everyone (public catalog) | Submission and approval by Anthropic/Cursor |
 
-> **Important :** Tant que le depot GitHub reste **prive**, personne ne peut voir le code ni installer le plugin sans avoir ete explicitement invite comme collaborateur. La methode B avec un repo prive est donc adaptee pour un usage personnel ou en equipe restreinte.
+> **Important:** As long as the GitHub repository remains **private**, no one can view the code or install the plugin without being explicitly invited as a collaborator. Method B with a private repo is suitable for personal use or small teams.
 
-### Pour Claude Code
+### For Claude Code
 
-#### Methode A — Test local
+#### Method A — Local Test
 
 ```bash
 claude --plugin-dir ./plugin/
 ```
 
-Charge le plugin pour la session en cours. `/reload-plugins` pour recharger apres modification.
+Loads the plugin for the current session. Use `/reload-plugins` to reload after modifications.
 
-#### Methode B — Marketplace personnel
+#### Method B — Personal Marketplace
 
-1. **Verifier** `marketplace/.claude-plugin/marketplace.json` :
+1. **Verify** `marketplace/.claude-plugin/marketplace.json`:
    ```json
    {
      "plugins": [{
@@ -126,66 +126,66 @@ Charge le plugin pour la session en cours. `/reload-plugins` pour recharger apre
    }
    ```
 
-2. **Publier** le depot : `git push origin main`
+2. **Push** the repository: `git push origin main`
 
-3. **Les utilisateurs** installent :
+3. **Users** install:
    ```bash
    /plugin marketplace add gse-one/gse-one
    /plugin install gse-one@gse-one
    ```
 
-   Scopes disponibles :
-   | Scope | Fichier | Usage |
-   |-------|---------|-------|
-   | `--scope user` | `~/.claude/settings.json` | Personnel (defaut) |
-   | `--scope project` | `.claude/settings.json` | Equipe (commit dans le repo) |
-   | `--scope local` | `.claude/settings.local.json` | Personnel, gitignore |
+   Available scopes:
+   | Scope | File | Usage |
+   |-------|------|-------|
+   | `--scope user` | `~/.claude/settings.json` | Personal (default) |
+   | `--scope project` | `.claude/settings.json` | Team (committed to repo) |
+   | `--scope local` | `.claude/settings.local.json` | Personal, gitignored |
 
-#### Methode C — Marketplace officiel Anthropic
+#### Method C — Official Anthropic Marketplace
 
-1. Soumettre via [claude.ai/settings/plugins/submit](https://claude.ai/settings/plugins/submit) ou [platform.claude.com/plugins/submit](https://platform.claude.com/plugins/submit)
-2. Plugin path : `plugin`
-3. Apres approbation : `claude plugin install gse-one`
+1. Submit via [claude.ai/settings/plugins/submit](https://claude.ai/settings/plugins/submit) or [platform.claude.com/plugins/submit](https://platform.claude.com/plugins/submit)
+2. Plugin path: `plugin`
+3. After approval: `claude plugin install gse-one`
 
-### Pour Cursor
+### For Cursor
 
-#### Methode A — Test local
+#### Method A — Local Test
 
 ```bash
-# Copier le plugin dans le projet
+# Copy the plugin into the project
 cp -r gse-one/plugin/ ./gse-one-plugin/
-# Dans Cursor : /add-plugin > Local > selectionner ./gse-one-plugin/
+# In Cursor: /add-plugin > Local > select ./gse-one-plugin/
 ```
 
-#### Methode B — Cursor Marketplace
+#### Method B — Cursor Marketplace
 
-1. Soumettre via [cursor.com/marketplace/publish](https://cursor.com/marketplace/publish)
-2. Le plugin contient deja `.cursor-plugin/plugin.json` avec les paths corrects
-3. Apres approbation : les utilisateurs installent via `/add-plugin`
+1. Submit via [cursor.com/marketplace/publish](https://cursor.com/marketplace/publish)
+2. The plugin already contains `.cursor-plugin/plugin.json` with the correct paths
+3. After approval: users install via `/add-plugin`
 
-#### Methode C — Distribution GitHub
+#### Method C — GitHub Distribution
 
-Les utilisateurs clonent et installent localement :
+Users clone and install locally:
 ```bash
 git clone --depth 1 https://github.com/gse-one/gse-one.git /tmp/gse
 cp -r /tmp/gse/plugin/ ./gse-one-plugin/
 rm -rf /tmp/gse
-# Dans Cursor : /add-plugin > Local > selectionner ./gse-one-plugin/
+# In Cursor: /add-plugin > Local > select ./gse-one-plugin/
 ```
 
 ---
 
-## 4. Recapitulatif des commandes
+## 4. Command Reference
 
-### Developpeur
+### Developer
 
 ```bash
-# Regenerer apres modification
+# Regenerate after modification
 python3 gse_generate.py --clean --verify
 
-# Publier une nouvelle version
-# 1. Mettre a jour version dans gse_generate.py (constante VERSION)
-# 2. Regenerer
+# Publish a new version
+# 1. Update version in gse_generate.py (VERSION constant)
+# 2. Regenerate
 python3 gse_generate.py --clean --verify
 # 3. Commit + tag + push
 git add .
@@ -194,49 +194,49 @@ git tag v0.8.1
 git push origin main --tags
 ```
 
-### Utilisateur Claude Code
+### Claude Code User
 
 ```bash
-# Marketplace personnel
+# Personal marketplace
 /plugin marketplace add gse-one/gse-one
 /plugin install gse-one@gse-one
 
-# Marketplace officiel
+# Official marketplace
 /plugin install gse-one
 
-# Test local
+# Local test
 claude --plugin-dir ./plugin/
 ```
 
-### Utilisateur Cursor
+### Cursor User
 
 ```bash
-# Marketplace officiel
-# /add-plugin > chercher "gse-one"
+# Official marketplace
+# /add-plugin > search "gse-one"
 
 # Local
-# /add-plugin > Local > selectionner le dossier plugin/
+# /add-plugin > Local > select the plugin/ directory
 ```
 
 ### Verification
 
-Quelle que soit la methode, taper :
+Regardless of the method, type:
 
 ```
 /gse:go
 ```
 
-L'agent GSE-One doit repondre, detecter l'etat du projet et proposer l'activite suivante.
+The GSE-One agent should respond, detect the project state and propose the next activity.
 
 ---
 
 ## Versioning
 
-Voir [CHANGELOG.md](CHANGELOG.md) pour l'historique des versions.
+See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-Pour publier une nouvelle version :
+To publish a new version:
 
-1. Modifier la constante `VERSION` dans `gse_generate.py`
-2. Regenerer : `python3 gse_generate.py --clean --verify`
-3. Mettre a jour `CHANGELOG.md`
-4. Commit + tag : `git tag vX.Y.Z && git push origin main --tags`
+1. Update the `VERSION` constant in `gse_generate.py`
+2. Regenerate: `python3 gse_generate.py --clean --verify`
+3. Update `CHANGELOG.md`
+4. Commit + tag: `git tag vX.Y.Z && git push origin main --tags`

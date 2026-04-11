@@ -1,6 +1,6 @@
 # GSE-One — Generic Software Engineering One
 
-Mono-plugin architecture — cross-platform parity. Voir [CHANGELOG](../CHANGELOG.md) pour l'historique des versions.
+Mono-plugin architecture — cross-platform parity. See [CHANGELOG](../CHANGELOG.md) for version history.
 
 > AI engineering companion for structured SDLC management. 22 commands, adaptive risk analysis, unified backlog, knowledge transfer, worktree isolation.
 
@@ -27,49 +27,49 @@ GSE-One orchestrates the full lifecycle: `COLLECT > ASSESS > PLAN > PRODUCE > RE
 
 ## Installation
 
-### Methode 1 — Clone du depot (recommandee)
+### Method 1 — Clone the Repository (recommended)
 
-C'est la methode principale. Elle fonctionne avec un depot prive (acces reserve aux collaborateurs invites) comme public.
+This is the primary method. It works with both private (access restricted to invited collaborators) and public repositories.
 
 ```bash
-# Cloner le depot
+# Clone the repository
 git clone https://github.com/nicolasguelfi/gensem.git
 cd gensem/gse-one
 ```
 
-Puis charger le plugin selon votre plateforme :
+Then load the plugin for your platform:
 
-**Claude Code :**
+**Claude Code:**
 ```bash
 claude --plugin-dir ./plugin/
 ```
 
-**Cursor :**
+**Cursor:**
 ```bash
-# Copier le dossier plugin dans votre projet
-cp -r plugin/ /chemin/vers/votre-projet/gse-one-plugin/
-# Dans Cursor : /add-plugin > Local > selectionner gse-one-plugin/
+# Copy the plugin directory into your project
+cp -r plugin/ /path/to/your-project/gse-one-plugin/
+# In Cursor: /add-plugin > Local > select gse-one-plugin/
 ```
 
-Tapez `/gse:go` pour demarrer.
+Type `/gse:go` to get started.
 
-### Methode 2 — Marketplace (quand disponible)
+### Method 2 — Marketplace (when available)
 
-Ces methodes ne sont pas encore operationnelles. Elles le deviendront lorsque les marketplaces officiels accepteront les soumissions.
+These methods are not yet operational. They will become available once the official marketplaces accept submissions.
 
-**Claude Code :**
+**Claude Code:**
 ```bash
-# Marketplace officiel Anthropic
+# Official Anthropic marketplace
 claude plugin install gse-one
 
-# Marketplace personnel
+# Personal marketplace
 /plugin marketplace add nicolasguelfi/gensem
 /plugin install gse-one@nicolasguelfi/gensem
 ```
 
-**Cursor :**
+**Cursor:**
 ```
-# Rechercher "gse-one" dans /add-plugin
+# Search "gse-one" in /add-plugin
 ```
 
 ## Commands (22)
@@ -132,4 +132,4 @@ gse-one/
 
 ## License
 
-MIT
+Business Source License 1.1 — see [LICENSE](LICENSE) for details.

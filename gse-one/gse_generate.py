@@ -9,7 +9,7 @@ Mono-plugin architecture: ONE directory deployable on both Claude Code and Curso
 
 Source layout:
     src/principles/    → 16 principle definitions (P1-P16)
-    src/activities/    → 22 activity SKILL.md files
+    src/activities/    → 22 activity definitions, each generated as a skill (plugin/skills/<name>/SKILL.md)
     src/agents/        → 9 agent roles (8 specialized + gse-orchestrator)
     src/templates/     → 15 artefact & config templates
 
@@ -40,9 +40,9 @@ from pathlib import Path
 # Constants
 # ---------------------------------------------------------------------------
 
-VERSION = "0.7.0"
-
 ROOT = Path(__file__).resolve().parent
+REPO_ROOT = ROOT.parent
+VERSION = (REPO_ROOT / "VERSION").read_text().strip()
 SRC = ROOT / "src"
 PLUGIN = ROOT / "plugin"
 
@@ -225,34 +225,40 @@ def generate(clean: bool = False) -> None:
 
 
 def generate_hooks() -> None:
-    """Generate platform-specific hooks with identical logic."""
-    # Shared hook logic
+    """Generate platform-specific hooks with cross-platform Python commands."""
+    # Shared hook logic (Python — works on macOS, Linux, and Windows)
     pre_bash_commit = (
-        "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q '^git commit'; then "
-        "branch=$(git branch --show-current 2>/dev/null); "
-        "if [ \"$branch\" = 'main' ]; then "
-        "echo 'GUARDRAIL: Direct commit to main detected. Use a feature branch.'; "
-        "exit 1; fi; fi"
+        "python3 -c \""
+        "import os,subprocess,sys; "
+        "t=os.environ.get('CLAUDE_TOOL_INPUT',''); "
+        "c=t.startswith('git commit'); "
+        "b=subprocess.run(['git','branch','--show-current'],"
+        "capture_output=True,text=True).stdout.strip() if c else ''; "
+        "(c and b=='main') and (print("
+        "'GUARDRAIL: Direct commit to main detected. Use a feature branch.'"
+        ",file=sys.stderr),sys.exit(2))"
+        "\""
     )
     pre_bash_force = (
-        "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q '^git push --force'; then "
-        "echo 'EMERGENCY GUARDRAIL: Force push detected. "
-        "This can cause permanent data loss. Aborting.'; exit 1; fi"
+        "python3 -c \""
+        "import os,sys; "
+        "t=os.environ.get('CLAUDE_TOOL_INPUT',''); "
+        "t.startswith('git push --force') and (print("
+        "'EMERGENCY GUARDRAIL: Force push detected. "
+        "This can cause permanent data loss. Aborting.'"
+        ",file=sys.stderr),sys.exit(2))"
+        "\""
     )
     post_bash_review = (
-        "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q '^git push'; then "
-        "python3 -c \"import yaml; s=yaml.safe_load(open('.gse/status.yaml')); "
-        "o=s.get('review_findings_open',0); "
-        "print(f'WARNING: {o} open review findings') if o > 0 else None\" "
-        "2>/dev/null || true; fi"
-    )
-    post_write_state = (
-        "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q '.gse/'; then "
-        "echo 'GSE-One state file modified. Run /gse:status to verify consistency.'; fi"
-    )
-    post_write_sprint = (
-        "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q 'docs/sprints/'; then "
-        "echo 'Sprint artefact saved. Verify YAML frontmatter includes gse.branch field.'; fi"
+        "python3 -c \""
+        "import os,re; "
+        "t=os.environ.get('CLAUDE_TOOL_INPUT',''); "
+        "f=os.path.join('.gse','status.yaml'); "
+        "c=open(f).read() if t.startswith('git push') and os.path.isfile(f) else ''; "
+        "m=re.search(r'review_findings_open:\\s*(\\d+)',c); "
+        "o=int(m.group(1)) if m else 0; "
+        "(o>0) and print('WARNING: '+str(o)+' open review findings')"
+        "\""
     )
 
     # Claude Code format (PascalCase events, explicit type)
@@ -267,10 +273,6 @@ def generate_hooks() -> None:
             "PostToolUse": [
                 {"matcher": "Bash", "hooks": [
                     {"type": "command", "command": post_bash_review},
-                ]},
-                {"matcher": "Write|Edit", "hooks": [
-                    {"type": "command", "command": post_write_state},
-                    {"type": "command", "command": post_write_sprint},
                 ]},
             ],
         },
@@ -291,10 +293,6 @@ def generate_hooks() -> None:
             "postToolUse": [
                 {"matcher": "Bash", "hooks": [
                     {"command": post_bash_review},
-                ]},
-                {"matcher": "Write|Edit", "hooks": [
-                    {"command": post_write_state},
-                    {"command": post_write_sprint},
                 ]},
             ],
         },

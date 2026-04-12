@@ -5,6 +5,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - 2026-04-12
+
+Layers impacted: **spec** (major), **design** (moderate), **production** (major)
+
+### Added
+- Conceptual framework in spec: coding agent architecture, abstract execution loop, Claude Code and Cursor platform sections, inclusion policy mapping
+- Agent Roles section in spec (9 agents with invocation mapping)
+- Cross-platform installer (`install.py`): interactive + CLI, plugin + non-plugin modes, post-install verification
+- Unified versioning: single `VERSION` file at repo root, read by generator and installer
+- Stable filenames: `gse-one-spec.md`, `gse-one-implementation-design.md` (no version suffix)
+- Terminology traceability notes across all three layers (spec activities, design skills, production SKILL.md)
+
+### Changed
+- P13 hooks reclassified: 7 hooks → 3 system hooks + 6 agent behaviors
+- Hooks rewritten as cross-platform Python commands (exit 2 + stderr for blocking, exit 0 for informational)
+- Config hooks section reduced to 3 keys (`protect_main`, `block_force_push`, `review_findings_on_push`)
+- All documentation, templates, and examples neutralized for macOS/Linux/Windows
+- `verbosity` default: `concise` → `standard`
+- `post_tag_hook` example: `./scripts/deploy.sh` → `python scripts/deploy.py`
+- Design §7 rewritten with Python hooks, 3 hooks only
+- Installation docs in both READMEs simplified to reference `install.py`
+
+### Removed
+- Version suffixes in filenames (git history preserves old versions)
+- Write|Edit reminder hooks (reclassified as agent behaviors)
+- Manual platform-specific install commands from READMEs (replaced by installer)
+
+## [0.9.0] - 2026-04-12
+
+Layers impacted: **spec** (major), **design** (moderate), **production** (moderate)
+
+### Added
+- Conceptual framework (spec §1.1): coding agent, agent, skill (with inclusion policies), hook, template, tool definitions
+- Platform-specific sections: Claude Code and Cursor execution loops, artifact delivery mechanisms, inclusion policy mapping
+- GSE-One mono-plugin architecture mapping table
+- Agent Roles section in spec (9 agents with invocation mapping)
+- Terminology traceability notes across all three layers (spec → design → production)
+
+### Changed
+- **Unified versioning**: single `VERSION` file at repo root, read by generator — replaces per-file version management
+- **Stable filenames**: `gse-one-spec.md` and `gse-one-implementation-design.md` (no version suffix)
+- **P13 hooks reclassified**: 7 hooks → 3 system hooks (protect main, block force-push, review findings on push) + 6 agent behaviors
+- Hooks rewritten as cross-platform Python commands with correct exit codes (exit 2 + stderr for blocking)
+- Config hooks section reduced to 3 keys (`protect_main`, `block_force_push`, `review_findings_on_push`)
+- `verbosity` default: `concise` → `standard`
+- `post_tag_hook` example: `./scripts/deploy.sh` → `python scripts/deploy.py`
+- All documentation, templates, and examples neutralized for macOS/Linux/Windows (symlinks → copy, bash → Python, tilde notes)
+- Design §7 rewritten with Python hooks, exit 2, stderr, 3 hooks only
+- Design cross-references updated to stable filenames
+
+### Removed
+- Version suffixes in filenames (git history preserves old versions)
+- Write|Edit reminder hooks (reclassified as agent behaviors)
+- `Supersedes` field in document headers (replaced by `VERSION` file + CHANGELOG)
+
 ## [0.8.0] - 2026-04-11
 
 ### Added
@@ -48,6 +103,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - First specification and implementation design drafts
 - Requirements document
 
+[0.10.0]: https://github.com/nicolasguelfi/gensem/compare/v0.9.0...v0.10.0
+[0.9.0]: https://github.com/nicolasguelfi/gensem/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/nicolasguelfi/gensem/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/nicolasguelfi/gensem/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/nicolasguelfi/gensem/compare/v0.4.0...v0.6.0

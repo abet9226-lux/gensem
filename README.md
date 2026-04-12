@@ -1,6 +1,6 @@
 # GSE-One — Plugin Publication Guide
 
-This repository contains the specification (`gse-one-spec-v0.8.md`), the design document (`gse-one-implementation-design-v0.8.md`) and the complete plugin implementation (`gse-one/`).
+This repository contains the specification (`gse-one-spec.md`), the design document (`gse-one-implementation-design.md`) and the complete plugin implementation (`gse-one/`). All three share the same version number, defined in the `VERSION` file at the repository root.
 
 This guide describes all the steps to publish the GSE-One plugin and make it installable by Claude Code and Cursor users.
 
@@ -64,6 +64,8 @@ cd gse-one/
 python3 gse_generate.py --clean --verify
 ```
 
+> **Windows:** If `python3` is not recognized, use `python` instead.
+
 The generator:
 1. Copies skills, specialized agents and templates (shared)
 2. Generates the orchestrator (`agents/gse-orchestrator.md`) and the Cursor rule (`rules/000-gse-methodology.mdc`) from the **same source** — verifies that the body is identical
@@ -97,41 +99,31 @@ Plugin visibility depends entirely on the distribution method chosen and the Git
 
 > **Important:** As long as the GitHub repository remains **private**, no one can view the code or install the plugin without being explicitly invited as a collaborator. Method B with a private repo is suitable for personal use or small teams.
 
-### For Claude Code
+### Install the plugin
 
-GSE-One adds 22 `/gse:*` commands. Choose the installation scope based on where you want them available:
-
-| Scope | When active | Command |
-|-------|------------|---------|
-| **Project** | Only inside a specific project directory | `claude plugin install ~/gensem/gse-one/plugin --scope project` |
-| **Project (personal)** | Same, but not committed to git | `claude plugin install ~/gensem/gse-one/plugin --scope local` |
-| **Global** | Every session, every directory | `claude plugin install ~/gensem/gse-one/plugin --scope user` |
-| **One-time** | Current terminal session only | `claude --plugin-dir ~/gensem/gse-one/plugin/` |
-
-> **Tip:** Use `--scope project` or `--scope local` to keep your `/` menu clean when working with multiple plugins. Reserve `--scope user` for plugins you need everywhere.
-
-#### Official Anthropic Marketplace (when available)
-
-1. Submit via [claude.ai/settings/plugins/submit](https://claude.ai/settings/plugins/submit) or [platform.claude.com/plugins/submit](https://platform.claude.com/plugins/submit)
-2. Plugin path: `gse-one/plugin`
-3. After approval: `claude plugin install gse-one`
-
-### For Cursor
-
-> **Note:** Cursor does not currently support project-scoped plugin installation. Local plugins are installed globally via `~/.cursor/plugins/`.
+Run the interactive installer (works on macOS, Linux, Windows):
 
 ```bash
-mkdir -p ~/.cursor/plugins/local
-ln -sf ~/gensem/gse-one/plugin ~/.cursor/plugins/local/gse-one
+python3 install.py
 ```
 
-The plugin is active in all projects opened in Cursor. Using a symlink keeps it in sync with the cloned repository.
+The installer detects your environment and guides you through platform selection (Claude Code, Cursor, or both), installation mode (plugin or non-plugin), and scope (project, personal, global).
 
-#### Cursor Marketplace (when available)
+For non-interactive or scripted installation:
 
-1. Submit via [cursor.com/marketplace/publish](https://cursor.com/marketplace/publish)
-2. The plugin already contains `.cursor-plugin/plugin.json` with the correct paths
-3. After approval: users install via `/add-plugin`
+```bash
+python3 install.py --platform claude --mode plugin --scope project
+python3 install.py --platform cursor --mode plugin
+python3 install.py --platform both --mode plugin --scope user
+```
+
+Run `python3 install.py --help` for all options.
+
+#### Marketplace (when available)
+
+Not yet operational. After approval:
+- Claude Code: `claude plugin install gse-one`
+- Cursor: search "gse-one" in `/add-plugin`
 
 ---
 
@@ -140,40 +132,35 @@ The plugin is active in all projects opened in Cursor. Using a symlink keeps it 
 ### Developer
 
 ```bash
-# Regenerate after modification
+# Regenerate plugin after modifying src/
+cd gse-one/
 python3 gse_generate.py --clean --verify
 
 # Publish a new version
-# 1. Update version in gse_generate.py (VERSION constant)
-# 2. Regenerate
+# 1. Update VERSION file at repo root
+# 2. Update CHANGELOG.md
+# 3. Regenerate
 python3 gse_generate.py --clean --verify
-# 3. Commit + tag + push
+# 4. Commit + tag + push
 git add .
-git commit -m "feat: GSE-One v0.8.1 — description"
-git tag v0.8.1
+git commit -m "feat: GSE-One vX.Y.Z — description"
+git tag vX.Y.Z
 git push origin main --tags
 ```
 
-### Claude Code User
+> **Windows:** If `python3` is not recognized, use `python` instead.
+
+### User
 
 ```bash
-# Project-scoped install (recommended)
-cd /path/to/your-project
-claude plugin install ~/gensem/gse-one/plugin --scope project
+# Install (interactive)
+python3 install.py
 
-# Global install (available everywhere)
-claude plugin install ~/gensem/gse-one/plugin --scope user
+# Install (scripted)
+python3 install.py --platform claude --mode plugin --scope project
 
-# One-time session test
-claude --plugin-dir ~/gensem/gse-one/plugin/
-```
-
-### Cursor User
-
-```bash
-# Global install (symlink)
-mkdir -p ~/.cursor/plugins/local
-ln -sf ~/gensem/gse-one/plugin ~/.cursor/plugins/local/gse-one
+# Uninstall
+python3 install.py --uninstall --platform claude --mode plugin
 ```
 
 ### Verification
@@ -194,7 +181,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 To publish a new version:
 
-1. Update the `VERSION` constant in `gse_generate.py`
-2. Regenerate: `python3 gse_generate.py --clean --verify`
-3. Update `CHANGELOG.md`
-4. Commit + tag: `git tag vX.Y.Z && git push origin main --tags`
+1. Update the `VERSION` file at the repository root
+2. Update `CHANGELOG.md` (include "Layers impacted: spec, design, production" as applicable)
+3. Regenerate: `cd gse-one && python3 gse_generate.py --clean --verify`
+4. Commit + tag: `git add . && git commit -m "feat: GSE-One vX.Y.Z" && git tag vX.Y.Z && git push origin main --tags`

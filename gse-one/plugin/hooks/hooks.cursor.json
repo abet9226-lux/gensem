@@ -6,10 +6,10 @@
         "matcher": "Bash",
         "hooks": [
           {
-            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q '^git commit'; then branch=$(git branch --show-current 2>/dev/null); if [ \"$branch\" = 'main' ]; then echo 'GUARDRAIL: Direct commit to main detected. Use a feature branch.'; exit 1; fi; fi"
+            "command": "python3 -c \"import os,subprocess,sys; t=os.environ.get('CLAUDE_TOOL_INPUT',''); c=t.startswith('git commit'); b=subprocess.run(['git','branch','--show-current'],capture_output=True,text=True).stdout.strip() if c else ''; (c and b=='main') and (print('GUARDRAIL: Direct commit to main detected. Use a feature branch.',file=sys.stderr),sys.exit(2))\""
           },
           {
-            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q '^git push --force'; then echo 'EMERGENCY GUARDRAIL: Force push detected. This can cause permanent data loss. Aborting.'; exit 1; fi"
+            "command": "python3 -c \"import os,sys; t=os.environ.get('CLAUDE_TOOL_INPUT',''); t.startswith('git push --force') and (print('EMERGENCY GUARDRAIL: Force push detected. This can cause permanent data loss. Aborting.',file=sys.stderr),sys.exit(2))\""
           }
         ]
       }
@@ -19,18 +19,7 @@
         "matcher": "Bash",
         "hooks": [
           {
-            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q '^git push'; then python3 -c \"import yaml; s=yaml.safe_load(open('.gse/status.yaml')); o=s.get('review_findings_open',0); print(f'WARNING: {o} open review findings') if o > 0 else None\" 2>/dev/null || true; fi"
-          }
-        ]
-      },
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q '.gse/'; then echo 'GSE-One state file modified. Run /gse:status to verify consistency.'; fi"
-          },
-          {
-            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -q 'docs/sprints/'; then echo 'Sprint artefact saved. Verify YAML frontmatter includes gse.branch field.'; fi"
+            "command": "python3 -c \"import os,re; t=os.environ.get('CLAUDE_TOOL_INPUT',''); f=os.path.join('.gse','status.yaml'); c=open(f).read() if t.startswith('git push') and os.path.isfile(f) else ''; m=re.search(r'review_findings_open:\\s*(\\d+)',c); o=int(m.group(1)) if m else 0; (o>0) and print('WARNING: '+str(o)+' open review findings')\""
           }
         ]
       }

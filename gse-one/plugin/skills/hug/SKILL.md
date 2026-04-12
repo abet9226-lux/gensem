@@ -79,13 +79,13 @@ When `--team` is specified or multiple git contributors are detected:
 1. **Detect git user** — Read `git config user.name` and `git config user.email`
 2. **Check profiles directory** — Look for `.gse/profiles/{username}.yaml`
 3. **Load or create** — If profile exists, load it. If not, run the interview for this user.
-4. **Symlink** — Create `.gse/profile.yaml` as a symlink to the active user's profile
-5. **Switch** — When git user changes between sessions, auto-switch the active profile
+4. **Link** — Copy the active user's profile to `.gse/profile.yaml` (or create a symlink on systems that support it)
+5. **Switch** — When git user changes between sessions, auto-switch the active profile by updating `.gse/profile.yaml`
 
 Profile file structure:
 ```
 .gse/
-├── profile.yaml          -> profiles/nicolas.yaml (symlink)
+├── profile.yaml          # active profile (copy of profiles/nicolas.yaml)
 └── profiles/
     ├── nicolas.yaml
     └── alex.yaml

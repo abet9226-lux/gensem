@@ -1,10 +1,9 @@
-# GSE-One — Implementation Design Document v0.7
+# GSE-One — Implementation Design Document
 
-**Version:** 0.7.0  
-**Date:** 2026-04-11  
-**Status:** Aligned with spec v0.7 — 44-gap fix pass  
-**Input:** `gse-one-spec-v0.7.md`, `gse-one-cross-inspection-design-v0.6-vs-spec-v0.7.md`  
-**Supersedes:** `gse-one-implementation-design-v0.6.md`
+**Version:** see `VERSION` file  
+**Date:** 2026-04-12  
+**Status:** Mono-plugin architecture — cross-platform parity, hooks aligned, terminology traceable  
+**Input:** `gse-one-spec.md`, implementation inspection and restructuration pass
 
 ---
 
@@ -16,6 +15,7 @@
 | v0.3 → v0.4 | Full git/worktree integration, renamed to GSE prefix |
 | v0.4 → v0.6 | `/gse:learn`, `/gse:backlog`, unified backlog, external sources, adopt/lightweight modes, team profiles, P15-P16 AI integrity, testing strategy, COMPOUND 3 axes, mono-repo, GitHub sync. |
 | v0.6 → v0.7 | **44-gap alignment with spec v0.7.** Eliminated `worktrees.yaml` (git state per-TASK in backlog). Added: assess skill, orchestrator decision logic (stale sprint, failure handling), safety/recovery (backup tags), status.yaml schema, checkpoint schema, state loading priority, deploy/rollback in deliver, dependency audit, framework drift detection, doc-as-artefact, concurrent access, team matching algorithm. Full config.yaml template (8 sections, ~50 keys). Principle count 16, agents 8, Cursor rules 9+3, templates 15. Spelling: `artefact_type`. |
+| v0.7 → v0.8 | **Mono-plugin architecture.** `dist/claude/` + `dist/cursor/` merged into single `plugin/` directory. Agents 8→9 (added `gse-orchestrator` for Claude identity). Cursor rules consolidated from 9+3 `.mdc` to 1 single `000-gse-methodology.mdc`. Hooks: 5→3 system hooks (removed Write|Edit reminders, reclassified as agent behaviors), official event-based format (`PreToolUse`/`PostToolUse`), cross-platform Python commands, two platform-specific files. Settings simplified to `{"agent": "gse-orchestrator"}`. TIME→COMPLEXITY: `stale_sprint_days`→`stale_sprint_sessions`, all calendar-based metrics removed. Config.yaml: 11 sections, ~50 keys (hooks section aligned with 3 system hooks). Methodology parity: orchestrator body = `.mdc` body, generated from same source. Generator rewrite (~400 lines). |
 
 ---
 
@@ -33,207 +33,116 @@
 
 ### 3.1 Repository Structure
 
+> **Terminology mapping:** The directory structure maps to the concepts defined in the specification: `activities/` contains the 22 activity definitions (spec), each generated as a skill (`plugin/skills/`). `agents/` provides agent roles (spec). `templates/` provides templates. `hooks/` provides system hooks (spec P13).
+
 ```
-gse-one/                                 # GitHub: your-org/gse-one
+gse-one/
 ├── README.md
 ├── LICENSE
-├── gse-one-spec.md                         # GSE-One methodology specification (v0.7)
-│
 ├── src/                                 # Shared source of truth
-│   ├── principles/                      # Core principle definitions (P1–P16, 16 files)
-│   │   ├── iterative-incremental.md     # P1 — Foundations
-│   │   ├── agile-terminology.md         # P2 — Foundations
-│   │   ├── artefacts-are-everything.md  # P3 — Foundations
-│   │   ├── human-in-the-loop.md         # P4 — Risk & Communication (incl. interaction pattern)
-│   │   ├── planning-at-every-level.md   # P5 — Foundations
-│   │   ├── traceability.md              # P6 — Foundations (incl. ID allocation, artefact_type)
-│   │   ├── risk-classification.md       # P7 — Risk & Communication
-│   │   ├── consequence-visibility.md    # P8 — Risk & Communication
-│   │   ├── adaptive-communication.md    # P9 — Risk & Communication
-│   │   ├── complexity-budget.md         # P10 — Risk & Communication
-│   │   ├── guardrails.md                # P11 — Risk & Communication
-│   │   ├── version-control.md           # P12 — Infrastructure
-│   │   ├── hooks.md                     # P13 — Infrastructure
-│   │   ├── knowledge-transfer.md        # P14 — Infrastructure
-│   │   ├── agent-fallibility.md         # P15 — AI Integrity
-│   │   └── adversarial-review.md        # P16 — AI Integrity
+│   ├── principles/                      # 16 principle definitions (P1-P16)
 │   ├── activities/                      # 22 activity definitions
-│   │   ├── go.md
-│   │   ├── hug.md
-│   │   ├── learn.md                     # /gse:learn
-│   │   ├── backlog.md                   # /gse:backlog — NEW
-│   │   ├── collect.md
-│   │   ├── assess.md
-│   │   ├── plan.md
-│   │   ├── reqs.md
-│   │   ├── design.md
-│   │   ├── preview.md
-│   │   ├── tests.md
-│   │   ├── produce.md
-│   │   ├── deliver.md
-│   │   ├── review.md
-│   │   ├── fix.md
-│   │   ├── compound.md
-│   │   ├── integrate.md
-│   │   ├── task.md
-│   │   ├── status.md
-│   │   ├── health.md
-│   │   ├── pause.md
-│   │   └── resume.md
-│   ├── agents/                          # 8 specialized agent roles
+│   ├── agents/                          # 9 agent roles (8 specialized + gse-orchestrator)
+│   │   ├── gse-orchestrator.md          # Identity agent — source for both platforms
 │   │   ├── requirements-analyst.md
 │   │   ├── architect.md
-│   │   ├── test-strategist.md          # Enhanced — test pyramid, coverage, evidence
+│   │   ├── test-strategist.md
 │   │   ├── code-reviewer.md
 │   │   ├── security-auditor.md
 │   │   ├── ux-advocate.md
 │   │   ├── guardrail-enforcer.md
-│   │   └── devil-advocate.md           # P16 — hunts hallucinations, challenges assumptions
-│   └── templates/                       # Artefact & config templates
-│       ├── profile.yaml
-│       ├── config.yaml
-│       ├── status.yaml
-│       ├── backlog.yaml                 # NEW — unified work items template
-│       ├── sources.yaml                 # external source registry
-│       ├── gitignore-additions.txt      # .worktrees/ entry
-│       ├── learning-note.md             # learning note template
-│       ├── test-campaign.md            # test campaign report template
-│       └── sprint/
-│           ├── plan.md
-│           ├── reqs.md
-│           ├── design.md
-│           ├── tests.md
-│           ├── review.md
-│           ├── compound.md
-│           └── release.md
+│   │   └── devil-advocate.md
+│   └── templates/                       # 15 templates (same as v0.7)
 │
-├── dist/
-│   ├── claude/                          # Generated Claude Code plugin
-│   └── cursor/                          # Generated Cursor plugin
+├── plugin/                              # Single deployable directory (both platforms)
+│   ├── .claude-plugin/plugin.json       # Claude Code manifest
+│   ├── .cursor-plugin/plugin.json       # Cursor manifest
+│   ├── skills/                          # 22 skills (shared)
+│   ├── agents/                          # 9 agents (shared, incl. orchestrator)
+│   ├── templates/                       # 15 templates (shared)
+│   ├── rules/
+│   │   └── 000-gse-methodology.mdc      # Cursor-only (ignored by Claude)
+│   ├── hooks/
+│   │   ├── hooks.claude.json            # Claude Code format
+│   │   └── hooks.cursor.json            # Cursor format
+│   └── settings.json                    # Claude-only (ignored by Cursor)
 │
 ├── marketplace/
-│   └── .claude-plugin/
-│       └── marketplace.json
+│   └── .claude-plugin/marketplace.json
 │
-└── gse_generate.py                     # Generator: src/ → dist/
+└── gse_generate.py                      # Generator: src/ → plugin/
 ```
 
-### 3.2 Plugin Manifest
+### 3.2 Plugin Manifests
 
-Both plugins share the same manifest structure. The `repository` field is the **source of truth** for methodology feedback (COMPOUND Axe 2) — the agent reads this URL to create issues on the GSE-One repo. It is NOT configured in the user's `.gse/config.yaml`.
+Both platforms use separate manifests with slightly different fields. The `repository` field is the **source of truth** for methodology feedback (COMPOUND Axe 2) — the agent reads this URL to create issues on the GSE-One repo. It is NOT configured in the user's `.gse/config.yaml`.
+
+**Claude Code manifest** (`.claude-plugin/plugin.json`):
 
 ```json
 {
   "name": "gse",
   "description": "GSE-One — AI engineering companion for structured SDLC management. 22 commands, adaptive risk analysis, unified backlog, knowledge transfer, worktree isolation.",
   "version": "0.7.0",
-  "author": { "name": "GSE-One Project" },
-  "repository": "https://github.com/your-org/gse-one"
+  "author": {
+    "name": "GSE-One Project"
+  },
+  "repository": "https://github.com/gse-one/gse-one",
+  "skills": "./skills/",
+  "agents": "./agents/",
+  "hooks": "./hooks/hooks.claude.json"
 }
 ```
 
-### 3.3 Generated: Claude Code Plugin
+**Cursor manifest** (`.cursor-plugin/plugin.json`):
 
-```
-dist/claude/
-├── .claude-plugin/
-│   └── plugin.json                      # Manifest (see 3.2)
-│
-├── skills/                              # 22 activity skills
-│   ├── go/SKILL.md                      # Includes --adopt mode
-│   ├── hug/SKILL.md                     # Includes team profile detection
-│   ├── learn/SKILL.md                   # Knowledge transfer
-│   ├── backlog/SKILL.md                 # NEW — unified work item management
-│   ├── collect/SKILL.md                 # Includes external source mode
-│   ├── assess/SKILL.md
-│   ├── plan/SKILL.md                    # Creates sprint branch
-│   ├── reqs/SKILL.md
-│   ├── design/SKILL.md
-│   ├── preview/SKILL.md
-│   ├── tests/SKILL.md                   # Test strategy, env setup, campaigns, evidence
-│   ├── produce/SKILL.md                 # Creates feature branch + worktree, runs tests
-│   ├── deliver/SKILL.md                 # Merges, tags, cleans up
-│   ├── review/SKILL.md                  # Diff-based review + devil's advocate (P16)
-│   ├── fix/SKILL.md                     # Fix branch + worktree
-│   ├── compound/SKILL.md
-│   ├── integrate/SKILL.md
-│   ├── task/SKILL.md                    # Ad-hoc branch + worktree
-│   ├── status/SKILL.md                  # Shows branch/worktree state
-│   ├── health/SKILL.md                  # 8 dimensions: git hygiene + AI integrity
-│   ├── pause/SKILL.md                   # Auto-commits, saves worktree map
-│   └── resume/SKILL.md                  # Verifies worktrees
-│
-├── agents/
-│   ├── requirements-analyst.md
-│   ├── architect.md
-│   ├── test-strategist.md              # Enhanced: pyramid, coverage, evidence
-│   ├── code-reviewer.md
-│   ├── security-auditor.md
-│   ├── ux-advocate.md
-│   ├── guardrail-enforcer.md
-│   └── devil-advocate.md               # P16: hallucination hunt, assumption challenge
-│
-├── hooks/
-│   └── hooks.json                       # Git guardrail hooks
-│
-├── settings.json                        # Agent identity + principles
-│
-└── templates/
-    ├── profile.yaml
-    ├── config.yaml
-    ├── status.yaml
-    ├── backlog.yaml                     # NEW — unified work items
-    ├── sources.yaml
-    ├── gitignore-additions.txt
-    ├── learning-note.md
-    ├── test-campaign.md                 # Test campaign report template
-    └── sprint/
-        ├── plan.md
-        ├── reqs.md
-        ├── design.md
-        ├── tests.md
-        ├── review.md
-        ├── compound.md
-        └── release.md
+```json
+{
+  "name": "gse",
+  "displayName": "GSE-One",
+  "description": "GSE-One — AI engineering companion for structured SDLC management. 22 commands, adaptive risk analysis, unified backlog, knowledge transfer, worktree isolation.",
+  "version": "0.7.0",
+  "author": {
+    "name": "GSE-One Project"
+  },
+  "repository": "https://github.com/gse-one/gse-one",
+  "skills": "./skills/",
+  "agents": "./agents/",
+  "rules": "./rules/",
+  "hooks": "./hooks/hooks.cursor.json"
+}
 ```
 
-### 3.4 Generated: Cursor Plugin
+Key differences:
+- Claude uses `hooks` pointing to `hooks.claude.json`; Cursor uses `hooks` pointing to `hooks.cursor.json`
+- Cursor has `displayName` and `rules` fields; Claude does not
+- Claude loads methodology via `settings.json` → agent reference; Cursor loads via `rules/`
 
-```
-dist/cursor/
-├── .cursor-plugin/
-│   └── plugin.json
-│
-├── skills/                              # Same 22 skills (identical content)
-│   └── ... (same as Claude Code)
-│
-├── agents/                              # Same 8 agents
-│   └── ... (same as Claude Code, includes devil-advocate.md)
-│
-├── rules/                               # Cursor-specific always-on rules
-│   ├── 000-gse-identity.mdc
-│   ├── 001-gse-interaction.mdc
-│   ├── 002-gse-decision-tiers.mdc
-│   ├── 003-gse-guardrails.mdc
-│   ├── 004-gse-adaptive-comm.mdc
-│   ├── 005-gse-version-control.mdc      # P12 always-on
-│   ├── 006-gse-knowledge-transfer.mdc   # P14 always-on
-│   ├── 007-gse-agent-fallibility.mdc    # P15 always-on — confidence levels
-│   ├── 008-gse-adversarial-review.mdc   # P16 always-on — devil's advocate, pushback
-│   ├── 050-gse-sprint-files.mdc
-│   ├── 051-gse-config-files.mdc
-│   └── 052-gse-worktree-files.mdc       # glob: .worktrees/**
-│
-├── hooks/
-│   └── hooks.json
-│
-└── templates/
-    └── ... (same as Claude Code)
-```
+### 3.3 Mono-Plugin Architecture
+
+ONE directory (`plugin/`) serves both platforms. Shared components — skills, agents, and templates — exist once. Platform-specific files are minimal:
+
+| File | Claude Code | Cursor | Purpose |
+|------|:-----------:|:------:|---------|
+| `.claude-plugin/plugin.json` | **used** | ignored | Claude manifest |
+| `.cursor-plugin/plugin.json` | ignored | **used** | Cursor manifest |
+| `settings.json` | **used** | ignored | Agent identity reference |
+| `hooks/hooks.claude.json` | **used** | ignored | Claude hook format (PascalCase) |
+| `hooks/hooks.cursor.json` | ignored | **used** | Cursor hook format (camelCase) |
+| `rules/000-gse-methodology.mdc` | ignored | **used** | Cursor always-on methodology rule |
+| `skills/` (22) | **shared** | **shared** | All activity skills |
+| `agents/` (9) | **shared** | **shared** | All agents incl. orchestrator |
+| `templates/` (15) | **shared** | **shared** | All artefact/config templates |
+
+Claude ignores the `rules/` directory silently. Cursor ignores `settings.json` silently. This means a single install (`claude --plugin-dir plugin/` or Cursor plugin install) works without any platform-specific preparation.
 
 ---
 
 ## 4. Git-Integrated Skill Designs
+
+> **Terminology:** This document describes the design of **skills** — the technical artifacts (`SKILL.md` files in `plugin/skills/`) that deliver the **activities** defined in the specification. Each skill implements exactly one activity: the skill `plan/SKILL.md` delivers the activity `/gse:plan`. See the specification for the formal relationship between activities, skills, commands, and inclusion policies.
+
+> **Note:** This document details the 17 skills that required specific design decisions (git integration, new mechanisms, complex workflows). The following 5 activities are implemented directly from the spec without additional design: `/gse:reqs`, `/gse:design`, `/gse:preview`, `/gse:compound`, `/gse:integrate`. See the specification (§3) for their full definitions.
 
 ### 4.1 `/gse:plan` — Git Integration
 
@@ -1288,11 +1197,13 @@ When `/gse:go` is invoked:
 | Sprint, review done, fixes pending | Start FIX |
 | Sprint, all delivered | Start LC03: COMPOUND > INTEGRATE |
 | Sprint, compound done | Propose next sprint → LC01 |
-| Sprint stale (> `lifecycle.stale_sprint_days` days) | Step 3 |
+| Sprint stale (> `lifecycle.stale_sprint_sessions` sessions without progress) | Step 3 |
+
+Progression is defined as any TASK status change (e.g., `planned` → `in-progress`, `in-progress` → `done`). A session where no TASK status changes counts as a session without progress, incrementing `sessions_without_progress` in `status.yaml`.
 
 **Step 3 — Stale sprint detection (Gate):**
 ```
-Sprint N has been inactive for X days.
+Sprint N has had X sessions without progress.
 1. Resume — pick up where we left off
 2. Partial delivery — deliver completed tasks, defer rest to pool
 3. Discard — abandon sprint, move all tasks to pool, delete branches
@@ -1370,9 +1281,21 @@ complexity:
   consumed: 6.5
   remaining: 3.5
 
+# P16 pushback detection
 consecutive_acceptances: 2
+never_discusses: false
+terse_responses: 0
+never_modifies: false
+never_questions: false
+
 last_activity: /gse:produce
 last_activity_date: 2026-04-11
+
+# Stale sprint detection (complexity/session-based, not calendar-based)
+sessions_without_progress: 0
+
+# Review findings counter (used by hooks)
+review_findings_open: 0
 ```
 
 **Checkpoint schema (spec §12.5):**
@@ -1458,217 +1381,140 @@ In lightweight mode detection: add note that for truly one-off tasks, don't use 
 
 ---
 
-## 6. Always-On Rules (Cursor)
+## 6. Methodology Deployment: Cross-Platform Parity
 
-### 6.1 `005-gse-version-control.mdc`
+The GSE-One methodology is loaded as the agent's permanent identity on both platforms through a dual-mechanism approach, ensuring identical behavior regardless of the tool used.
 
-```yaml
----
-description: "GSE-One version control isolation — protects main branch, enforces worktree-based development, prevents accidental destructive git operations"
-alwaysApply: true
----
-```
+### 6.1 Claude Code: Agent Reference
 
-```markdown
-# GSE-One Version Control (P12)
-
-## Golden Rule
-NEVER commit directly to `main`. All changes go through feature branches.
-
-## Before Any Code Change
-1. Check current branch: `git branch --show-current`
-2. If on `main` → **Hard guardrail**: "You're on main. Create a feature branch first."
-3. If not on a `gse/*` branch → **Inform**: "You're on branch X which is not managed
-   by GSE-One. Proceed or create a gse/* branch?"
-
-## Worktree Awareness
-- Check `.gse/config.yaml` → `git.strategy`
-- If `worktree`: ensure work happens inside `.worktrees/` directories
-- If editing files in the project root while worktrees are active:
-  **Inform**: "You're editing files on main. Did you mean to edit in worktree X?"
-
-## Destructive Operation Protection
-- `git push --force` → **Emergency guardrail**
-- `git reset --hard` → **Hard guardrail**
-- `git branch -D` (force delete) → **Hard guardrail**: verify branch is merged first
-- `git clean -f` → **Hard guardrail**: verify no important untracked files
-
-## Commit Convention
-When committing on a `gse/*` branch, use:
-```
-gse(<scope>): <description>
-
-Sprint: <N>
-Traces: <IDs>
-```
-```
-
-### 6.2 `006-gse-knowledge-transfer.mdc` (NEW)
-
-```yaml
----
-description: "GSE-One knowledge transfer — detects learning opportunities, inserts contextual tips calibrated to user expertise, proposes proactive learning sessions at workflow transitions"
-alwaysApply: true
----
-```
-
-```markdown
-# GSE-One Knowledge Transfer (P14)
-
-## Contextual Tips
-After any action involving a technical concept:
-1. Read `.gse/profile.yaml` → competency_map
-2. If concept not yet explained AND relevant to current task:
-   - Insert 2-3 sentence explanation after the action result
-   - Calibrate to user's domain_background (P9)
-   - Mark concept as explained in competency_map
-3. Never repeat a concept already explained. Max 1 tip per activity step.
-
-## Proactive Proposals
-At natural transitions (end of sprint, before complex activity, after repeated findings),
-propose a learning session if competency gap detected.
-Max 1 proposal per activity phase.
-
-## Learning Notes
-Persisted in `docs/learning/<topic>.md`. Cumulative. Written in user's language
-with project-specific examples.
-```
-
-### 6.3 `007-gse-agent-fallibility.mdc` (P15)
-
-```yaml
----
-description: "GSE-One agent fallibility — forces explicit confidence levels on every recommendation, requires verification for critical assertions, mandates source citation when teaching"
-alwaysApply: true
----
-```
-
-```markdown
-# GSE-One Agent Fallibility (P15)
-
-## Confidence Levels
-Every recommendation, assertion, or code production must carry a confidence tag:
-
-- **Verified**: factually checked (code ran, lib installed, API confirmed) → no caveat
-- **High**: established knowledge, not verified in this project → "Not verified in your context"
-- **Moderate**: reconstructed from patterns → "I believe X, but verify Y"
-- **Low**: uncertain → "I am not confident. Verify independently: [checkpoints]"
-
-Never present Moderate/Low content with the same tone as Verified content.
-
-## Verification Gates
-Before asserting, verify:
-- Libraries: `pip show <lib>` or `npm list <lib>`
-- APIs: test request or cite official documentation URL
-- Code: execute tests, show results
-- Patterns: cite verifiable source
-
-If cannot verify: mark as **unverified** in output. Health dashboard counts unverified items.
-
-## Source Citation
-When teaching (P14) or recommending:
-- Cite source when possible (official docs, books, RFCs)
-- If no source: "Based on my general understanding — please verify independently."
-```
-
-### 6.4 `008-gse-adversarial-review.mdc` (P16)
-
-```yaml
----
-description: "GSE-One adversarial self-review — activates devil's advocate during review to hunt hallucinations and challenge assumptions, detects passive user acceptance and triggers pushback"
-alwaysApply: true
----
-```
-
-```markdown
-# GSE-One Adversarial Review (P16)
-
-## Devil's Advocate (during /gse:review)
-After standard review, challenge own productions:
-1. Verify all libraries/APIs actually exist
-2. Question every implicit assumption
-3. Check if user decisions were genuinely challenged or rubber-stamped
-4. Test edge cases: null, empty, large, malicious input
-5. Flag potentially outdated recommendations
-Tag findings as `[AI-INTEGRITY]`.
-
-## User Pushback
-Track `consecutive_acceptances` in `.gse/status.yaml`.
-After N consecutive Gate decisions accepted without discussion:
-- Beginner: N=3, Intermediate: N=5, Expert: N=8
-- Present critical checkpoint: list 3 most impactful recent decisions
-- Ask user to confirm or revisit
-- If user confirms twice: respect, don't trigger until next sprint
-```
-
----
-
-## 7. Hooks Design (Extended)
-
-### 7.1 Claude Code: `hooks/hooks.json`
+Claude Code uses `settings.json` to load the orchestrator agent as session identity:
 
 ```json
 {
-  "hooks": [
-    {
-      "event": "on_tool_use",
-      "tool": "Write",
-      "matcher": ".gse/**",
-      "action": "notify",
-      "message": "GSE-One state file modified. Run /gse:status to verify consistency."
-    },
-    {
-      "event": "on_tool_use",
-      "tool": "Bash",
-      "matcher": "git commit*",
-      "action": "run",
-      "command": "branch=$(git branch --show-current); if [ \"$branch\" = 'main' ]; then echo 'GUARDRAIL: Direct commit to main detected. Use a feature branch.'; exit 1; fi"
-    },
-    {
-      "event": "on_tool_use",
-      "tool": "Bash",
-      "matcher": "git push --force*",
-      "action": "run",
-      "command": "echo 'EMERGENCY GUARDRAIL: Force push detected. This can cause permanent data loss. Aborting.'; exit 1"
-    },
-    {
-      "event": "on_tool_use",
-      "tool": "Bash",
-      "matcher": "git push*",
-      "action": "run",
-      "command": "python3 -c \"import yaml; s=yaml.safe_load(open('.gse/status.yaml')); o=s.get('review_findings_open',0); print(f'WARNING: {o} open review findings') if o > 0 else None\" 2>/dev/null || true"
-    },
-    {
-      "event": "on_tool_use",
-      "tool": "Write",
-      "matcher": "docs/sprints/**/*.md",
-      "action": "notify",
-      "message": "Sprint artefact saved. Verify YAML frontmatter includes gse.branch field."
-    }
-  ]
+  "agent": "gse-orchestrator"
 }
 ```
 
-### 7.2 Cursor: `hooks/hooks.json`
+This causes Claude Code to load `agents/gse-orchestrator.md` at session start, making the full methodology body (16 principles, state management, orchestration decision tree) the agent's permanent context.
+
+### 6.2 Cursor: Always-On Rule
+
+Cursor uses `rules/000-gse-methodology.mdc` with `alwaysApply: true` to inject the methodology permanently into every interaction:
+
+```yaml
+---
+description: "GSE-One methodology — 16 core principles, state management, orchestration decision tree. This is the agent's permanent identity."
+alwaysApply: true
+---
+```
+
+The body following this frontmatter is identical to the body of `agents/gse-orchestrator.md`.
+
+### 6.3 Generation and Parity
+
+Both files are generated from the same source: `src/agents/gse-orchestrator.md`. The generator:
+
+1. Extracts the body (everything after the YAML frontmatter `---...---`)
+2. Wraps the body with **agent frontmatter** for Claude Code (`name`, `description` fields)
+3. Wraps the same body with **.mdc frontmatter** for Cursor (`description`, `alwaysApply` fields)
+4. Verifies body parity at generation time — if the two generated bodies differ, the generator reports `DIVERGENT!`
+
+This ensures that Claude Code and Cursor users experience the exact same methodology, decision logic, and orchestration behavior.
+
+---
+
+## 7. Hooks Design
+
+GSE-One implements **3 system hooks** (spec P13 — Event-Driven Behaviors) — deterministic, rigid checks where the risk of the AI forgetting is too high. All hook commands use cross-platform Python (`python3 -c`). The commands are defined as shared constants in the generator and emitted in platform-specific JSON wrappers.
+
+| Hook | Event | Matcher | Level | Exit |
+|------|-------|---------|-------|------|
+| Protect main | PreToolUse | Bash | Hard | 2 (block) |
+| Block force-push | PreToolUse | Bash | Emergency | 2 (block) |
+| Review findings on push | PostToolUse | Bash | Informational | 0 (warn) |
+
+Blocking hooks (exit 2) write to **stderr** so the agent receives the feedback. Informational hooks (exit 0) write to **stdout**.
+
+### 7.1 Claude Code: `hooks/hooks.claude.json`
+
+Claude Code uses PascalCase event names (`PreToolUse`, `PostToolUse`) and an explicit `type` field:
 
 ```json
 {
-  "hooks": [
-    {
-      "event": "on_file_save",
-      "glob": ".gse/**",
-      "action": "notify",
-      "message": "GSE-One state file modified."
-    },
-    {
-      "event": "on_file_save",
-      "glob": "docs/sprints/**/*.md",
-      "action": "notify",
-      "message": "Sprint artefact saved. Ensure YAML frontmatter is up to date."
-    }
-  ]
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import os,subprocess,sys; t=os.environ.get('CLAUDE_TOOL_INPUT',''); c=t.startswith('git commit'); b=subprocess.run(['git','branch','--show-current'],capture_output=True,text=True).stdout.strip() if c else ''; (c and b=='main') and (print('GUARDRAIL: Direct commit to main detected. Use a feature branch.',file=sys.stderr),sys.exit(2))\""
+          },
+          {
+            "type": "command",
+            "command": "python3 -c \"import os,sys; t=os.environ.get('CLAUDE_TOOL_INPUT',''); t.startswith('git push --force') and (print('EMERGENCY GUARDRAIL: Force push detected. This can cause permanent data loss. Aborting.',file=sys.stderr),sys.exit(2))\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import os,re; t=os.environ.get('CLAUDE_TOOL_INPUT',''); f=os.path.join('.gse','status.yaml'); c=open(f).read() if t.startswith('git push') and os.path.isfile(f) else ''; m=re.search(r'review_findings_open:\\s*(\\d+)',c); o=int(m.group(1)) if m else 0; (o>0) and print('WARNING: '+str(o)+' open review findings')\""
+          }
+        ]
+      }
+    ]
+  }
 }
 ```
+
+### 7.2 Cursor: `hooks/hooks.cursor.json`
+
+Cursor uses camelCase event names (`preToolUse`, `postToolUse`), a top-level `version` field, and omits the `type` field (implicit):
+
+```json
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "command": "python3 -c \"import os,subprocess,sys; t=os.environ.get('CLAUDE_TOOL_INPUT',''); c=t.startswith('git commit'); b=subprocess.run(['git','branch','--show-current'],capture_output=True,text=True).stdout.strip() if c else ''; (c and b=='main') and (print('GUARDRAIL: Direct commit to main detected. Use a feature branch.',file=sys.stderr),sys.exit(2))\""
+          },
+          {
+            "command": "python3 -c \"import os,sys; t=os.environ.get('CLAUDE_TOOL_INPUT',''); t.startswith('git push --force') and (print('EMERGENCY GUARDRAIL: Force push detected. This can cause permanent data loss. Aborting.',file=sys.stderr),sys.exit(2))\""
+          }
+        ]
+      }
+    ],
+    "postToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "command": "python3 -c \"import os,re; t=os.environ.get('CLAUDE_TOOL_INPUT',''); f=os.path.join('.gse','status.yaml'); c=open(f).read() if t.startswith('git push') and os.path.isfile(f) else ''; m=re.search(r'review_findings_open:\\s*(\\d+)',c); o=int(m.group(1)) if m else 0; (o>0) and print('WARNING: '+str(o)+' open review findings')\""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### 7.3 Format Differences Summary
+
+| Aspect | Claude Code | Cursor |
+|--------|------------|--------|
+| Event names | PascalCase (`PreToolUse`) | camelCase (`preToolUse`) |
+| `type` field | Required (`"type": "command"`) | Omitted (implicit) |
+| `version` field | Absent | Required (`"version": 1`) |
+| Hook commands | Identical (cross-platform Python) | Identical (cross-platform Python) |
 
 ---
 
@@ -1703,6 +1549,8 @@ If this is the first session and git IS available but `git.strategy` is not set:
 ## 9. Marketplace & Distribution
 
 *Unchanged from v0.2 — see that document for Claude Code marketplace, Cursor marketplace, and installation flow.*
+
+**Note:** The `marketplace.json` install path is `"plugin"` (not `"dist/claude"`), reflecting the mono-plugin architecture.
 
 ---
 
@@ -1748,39 +1596,39 @@ If this is the first session and git IS available but `git.strategy` is not set:
 | v0.6a | 10 (+P14) | 20 (+learn) | 7+3 | 14 |
 | v0.6b | 10 | 21 (+backlog) | 7+3 | 14 |
 | v0.6c | 12 (+P15, P16) | 21 | 9+3 | 15 |
-| **v0.7** | **16 (all P1-P16)** | **21** | **9+3** | **15** |
+| v0.7 | 16 (all P1-P16) | 21 | 9+3 | 15 |
+| **v0.8** | **16** | **22** | **1 (consolidated)** | **15** |
+
+Note: Agents now 9 (8 specialized + gse-orchestrator). Generator ~400 lines.
 
 ### 11.2 Generation Steps
 
-| Step | Input | Output (Claude) | Output (Cursor) |
-|------|-------|-----------------|-----------------|
-| 1 | `src/principles/*.md` (16) | Embedded in `settings.json` agent key | `rules/00N-gse-*.mdc` (9 always-on) |
-| 2 | `src/activities/*.md` (22) | `skills/<name>/SKILL.md` (22) | `skills/<name>/SKILL.md` (22) |
-| 3 | `src/agents/*.md` (8) | `agents/<name>.md` (8) | `agents/<name>.md` (8) |
-| 4 | `src/templates/*` (15) | `templates/*` (15) | `templates/*` (15) |
-| 5 | — | `.claude-plugin/plugin.json` | `.cursor-plugin/plugin.json` |
-| 6 | — | `hooks/hooks.json` (5 hooks) | `hooks/hooks.json` (2 hooks) |
-| 7 | — | `settings.json` | — |
-| 8 | — | — | `rules/05N-gse-*.mdc` (3 glob) |
+| Step | Input | Output | Shared? |
+|------|-------|--------|---------|
+| 1 | `src/agents/gse-orchestrator.md` (body) | `plugin/agents/gse-orchestrator.md` + `plugin/rules/000-gse-methodology.mdc` | Body identical, frontmatter differs |
+| 2 | `src/activities/*.md` (22) | `plugin/skills/<name>/SKILL.md` | Shared |
+| 3 | `src/agents/*.md` (8 specialized) | `plugin/agents/<name>.md` | Shared |
+| 4 | `src/templates/*` (15) | `plugin/templates/*` | Shared |
+| 5 | Constants | `plugin/.claude-plugin/plugin.json` + `plugin/.cursor-plugin/plugin.json` | Two manifests |
+| 6 | Shared shell commands | `plugin/hooks/hooks.claude.json` + `plugin/hooks/hooks.cursor.json` | Same logic, different format |
+| 7 | — | `plugin/settings.json` | Claude-only |
 
 ---
 
 ## 12. File Inventory
 
-| Category | Claude Code | Cursor | Shared source |
-|----------|------------|--------|---------------|
-| Plugin manifest | 1 | 1 | — |
-| Skills | **22** | **22** | **22** activity sources |
-| Agents | **8** | **8** | **8** agent sources |
-| Always-on rules | — | **9** `.mdc` | **16** principle sources |
-| Glob rules | — | 3 `.mdc` | — |
-| Hooks | 1 (5 hooks) | 1 (2 hooks) | — |
-| Settings | 1 | — | — |
-| Templates | **15** | **15** | **15** template sources |
-| Marketplace | 1 | — | — |
-| **Total files** | **48** | **57** | **56 sources** |
+| Category | Shared | Claude-only | Cursor-only | Source |
+|----------|--------|-------------|-------------|--------|
+| Skills | 22 | — | — | 22 activities |
+| Agents | 9 (incl. orchestrator) | — | — | 9 agents |
+| Templates | 15 | — | — | 15 templates |
+| Manifest | — | 1 | 1 | — |
+| Rules | — | — | 1 (.mdc) | from orchestrator |
+| Hooks | — | 1 | 1 | shared constants |
+| Settings | — | 1 | — | — |
+| **Total** | **46** | **3** | **3** | **46 sources** |
 
-Generator script: `gse_generate.py` (~600 lines estimated)
+Grand total: **52 files**. Generator: ~400 lines.
 
 ---
 
@@ -1795,7 +1643,7 @@ Generator script: `gse_generate.py` (~600 lines estimated)
 5. Write the generator (skills, manifests, rules, templates)
 6. Implement git operations in plan (create sprint branch) and produce (create worktree)
 7. Implement adopt mode detection in `go` skill
-8. Test locally: `claude --plugin-dir dist/claude/`
+8. Test locally: `claude --plugin-dir plugin/`
 9. Verify `/gse:hug` → `/gse:plan` → `/gse:produce` creates branch + worktree
 
 ### Phase 2 — Core Lifecycle + Learning (week 2)
@@ -1836,7 +1684,7 @@ Generator script: `gse_generate.py` (~600 lines estimated)
 
 | # | Question | Impact | Recommendation |
 |---|----------|--------|----------------|
-| 1 | Should GSE-One principles be in `settings.json` agent key or separate skills? | Context efficiency | `settings.json` agent key — loaded once, applies to all |
+| 1 | ~~Should GSE-One principles be in `settings.json` agent key or separate skills?~~ | ~~Context efficiency~~ | **RESOLVED.** Principles are embedded in the orchestrator agent body (`agents/gse-orchestrator.md`), which also generates the Cursor `.mdc` rule. `settings.json` contains only the agent reference. |
 | 2 | Cursor marketplace or npm or both? | Reach | Both |
 | 3 | How to handle `.gse/` version upgrades? | UX | `gse_version` field + migration logic in skills |
 | 4 | How to handle git conflicts during deliver? | User experience | Gate decision with 3 options: resolve manually, use theirs, use ours |
@@ -1851,7 +1699,7 @@ Generator script: `gse_generate.py` (~600 lines estimated)
 
 ## Appendix A — Changelog
 
-> **Note:** Versions 0.1.0 through 0.7.0 were developed during an intensive design session. Future versions will follow standard release cadence.
+> **Note:** Versions 0.1.0 through 0.8.0 were developed during an intensive design session. Future versions will follow standard release cadence.
 
 | Version | Date | Changes |
 |---------|------|---------|
@@ -1861,3 +1709,4 @@ Generator script: `gse_generate.py` (~600 lines estimated)
 | 0.4.0 | 2026-04-10 | Renamed to `gse`/`GSE-One`. Dropped `/g1:` alias. |
 | 0.6.0 | 2026-04-10 | Spec v0.6 alignment. Learn, backlog, tests, P15-P16, devil-advocate agent, unified backlog, git state per-TASK. |
 | 0.7.0 | 2026-04-11 | **44-gap alignment with spec v0.7.** Eliminated worktrees.yaml (git state per-TASK in backlog). 16 principle source files (P1-P16). Added: assess skill (5.14), orchestrator decision logic with stale sprint (5.15), deploy/rollback + safety backup tags (5.16), status.yaml/checkpoint/state-loading schemas (5.17), full pushback signal tracking (5.18), doc-as-artefact, dependency audit, framework drift, team matching algorithm, concurrent access, min project size. Spelling: artefact_type. All worktrees.yaml refs replaced. Config template now covers 11 sections (~50 keys). |
+| 0.8.0 | 2026-04-11 | **Mono-plugin architecture.** `dist/` merged into single `plugin/` directory. 9 agents (added `gse-orchestrator`). Cursor rules consolidated to 1 `.mdc`. Hooks format: official event-based with platform-specific files. Settings simplified to agent reference. TIME→COMPLEXITY: `stale_sprint_days`→`stale_sprint_sessions`. Generator rewrite (~400 lines). Body parity verification for cross-platform methodology. |

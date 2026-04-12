@@ -1,8 +1,8 @@
 # GSE-One Project Status
 # Auto-maintained by the GSE-One agent. Do not edit manually.
-# Schema aligned with spec v0.7
+# Schema aligned with current spec (see VERSION file at repository root)
 
-gse_version: "0.7.0"
+gse_version: "0.9.0"
 current_sprint: 1
 current_phase: LC02                    # LC00 | LC01 | LC02 | LC03
 plan_status: approved                  # pending | approved | none

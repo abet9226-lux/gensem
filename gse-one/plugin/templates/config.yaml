@@ -48,10 +48,9 @@ health:
 
 # --- Section 8: Hooks ---
 hooks:
-  auto_commit_on_pause: true           # commit uncommitted work when /gse:pause
-  guardrail_on_push: true              # check review findings before git push
-  frontmatter_validation: true         # validate YAML frontmatter on artefact save
-  health_warning_on_commit: true       # warn if health score < 5 before commit
+  protect_main: true                   # block direct commits to main branch (Hard guardrail)
+  block_force_push: true               # block git push --force (Emergency guardrail)
+  review_findings_on_push: true        # warn if open review findings before push
 
 # --- Section 9: Git ---
 git:
@@ -65,7 +64,7 @@ git:
   tag_on_deliver: true                 # Tag main with semantic version on deliver
   cleanup_on_deliver: true             # Delete merged branches and worktrees after deliver
   pre_merge_check: ""                  # optional — e.g., "npm test"
-  post_tag_hook: ""                    # optional — e.g., "./scripts/deploy.sh staging"
+  post_tag_hook: ""                    # optional — e.g., "python scripts/deploy.py staging"
   rollback_on_deploy_failure: true     # auto-propose rollback if post_tag_hook fails
   backup_before_destructive: true      # create safety tags before merge/delete (Section 10.6)
   backup_retention_days: 30            # how long to keep backup tags

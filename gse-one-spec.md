@@ -1,8 +1,8 @@
 # GSE-One — Generic Software Engineering One
 
-**Version:** 0.7.0-draft  
-**Date:** 2026-04-11  
-**Status:** Post-critical-review — all 41 issues fixed  
+**Version:** see `VERSION` file  
+**Date:** 2026-04-12  
+**Status:** Conceptual framework — coding agent architecture, cross-platform parity, aligned hooks  
 **Aliases:** `gse`, `gse-one`, `gseone`
 
 > **Audience:** This document is the **technical specification** for GSE-One, intended for implementers and advanced users who want to understand the methodology in detail. If you are a **new user**, you don't need to read this — just type `/gse:go` and the agent will guide you through everything adaptively. A separate "Getting Started" guide will be available for beginners.
@@ -11,7 +11,7 @@
 
 ## Table of Contents
 
-1. [Overview](#1-overview) — Philosophy, key concepts
+1. [Overview](#1-overview) — Coding agent architecture, platform mapping, GSE-One philosophy, key concepts, agent roles
 2. [Core Principles](#2-core-principles) — Foundations (P1-P3, P5-P6) | Risk & Communication (P4, P7–P11) | Infrastructure (P12–P14) | AI Integrity (P15–P16)
 3. [Activities (Commands)](#3-activities-commands) — 22 commands across 8 categories
 4. [Collect — Artefact Inventory and External Source Discovery](#4-collect)
@@ -33,7 +33,241 @@ B. [Changelog](#appendix-b)
 
 ## 1. Overview
 
-GSE-One (Generic Software Engineering One) is an AI engineering companion that guides users through the full software development lifecycle. It is implemented as a plugin for AI coding agents (Cursor, Claude Code, or any agent-based IDE) and provides 22 commands covering planning, requirements, design, production, quality, delivery, and capitalization.
+### 1.1 Coding Agents and Plugin Architecture
+
+This section defines the foundational concepts of generative AI coding agents. Understanding these concepts is essential because GSE-One is not a standalone application — it is a set of artifacts consumed by a coding agent platform. The terminology used throughout this specification (agent, skill, hook, template) maps to concrete platform mechanisms described below.
+
+Concepts are ordered from most composite to least composite.
+
+#### Coding Agent
+
+A **coding agent** is an autonomous system built on a large language model (LLM) that operates in an iterative reasoning loop to accomplish software engineering tasks:
+
+```
+Observe → Reason → Act → Observe → ...
+```
+
+At each iteration, the coding agent observes the current state (user prompt, file contents, prior tool outputs, conversation history), reasons about what to do next, and acts by invoking one or more tools. The loop continues until the task is complete or requires human input.
+
+The coding agent's behavior is shaped by two layers of instructions:
+
+- The **system prompt** — a platform-provided, generally non-modifiable set of instructions that defines the agent's core identity, safety constraints, and capabilities. It is the foundation layer, always present and not visible to the user.
+- The **context** — the set of skills, rules, conversation history, and tool outputs loaded into the agent's working memory. The context is finite (bounded by the LLM's context window) and dynamically managed: the platform selectively injects artifacts based on inclusion rules and compacts older content when the window fills.
+
+A coding agent can **spawn subagents** — child instances that run their own independent reasoning loops with isolated context. Subagents can execute in parallel, use different LLM models, and return their results to the parent. This enables task decomposition: the parent agent delegates specialized work to subagents while continuing its own reasoning.
+
+#### Agent
+
+An **agent** is a named role that shapes how the coding agent reasons about a specific concern. An agent defines evaluation criteria, vocabulary, priorities, and domain expertise. When loaded into the coding agent's context, the agent acts as a persona — the coding agent adopts that expert's perspective for the duration of the task.
+
+Agents can serve different architectural functions:
+
+- A **default agent** is loaded at session start and remains active throughout. It defines the methodology, principles, and conventions that the coding agent follows at all times. In GSE-One, this role is called the **orchestrator** — it coordinates activities, manages state, and decides which specialized agents to activate. Note: "orchestrator" is a GSE-One convention, not a formal platform concept.
+- **Specialized agents** are loaded on demand by the default agent when their expertise is needed. They are injected into the context temporarily to preserve context budget.
+
+#### Skill
+
+A **skill** is a unit of knowledge and instructions that the coding agent can load into its context. A skill has three facets:
+
+- **Content** — what the coding agent should know or do: steps, constraints, inputs, outputs, evaluation criteria, or persistent conventions.
+- **Trigger** — how the skill is invoked. A skill can be triggered by a user **command** (typed as `/<name>` or `/<prefix>:<name>` in the prompt), by the agent autonomously (when it determines the skill is relevant), or by file patterns (when specific files are referenced). A single user prompt can trigger multiple skills; they are loaded into the context and processed by the coding agent.
+- **Inclusion policy** — when and for how long the content is loaded:
+
+| Inclusion policy | Loaded when | Duration | Typical use |
+|-----------------|-------------|----------|-------------|
+| **On-demand** | User types a command or agent decides | Duration of the activity | Activity-specific instructions |
+| **Always-on** | Session start | Entire session | Methodology principles, naming conventions |
+| **Contextual** | File pattern match or agent decision | While relevant | File-type-specific guidelines |
+
+At this level of abstraction, a "rule" (a persistent convention) and a "command" (a user-invoked activity) are both skills — they differ in their trigger and inclusion policy. This distinction matters because coding agent platforms implement these through different mechanisms (see below).
+
+#### Hook
+
+A **hook** is a deterministic, non-AI command that executes outside the LLM reasoning loop. It is triggered by a platform event (before a tool call, after a tool call, at session start, etc.) and communicates via exit codes:
+
+- **Exit 0** — success, the action proceeds
+- **Exit 2** — block, the action is cancelled and the reason is sent to the coding agent as feedback
+
+Hooks are reserved for constraints where the non-deterministic nature of AI is unacceptable — the risk of the LLM forgetting or adapting incorrectly is too high. A hook is code, not a prompt: it executes the same way every time.
+
+#### Template
+
+A **template** is a structured artifact skeleton — the expected form of a project deliverable (YAML schema, document outline, configuration defaults). Templates are passive: they are read by skills when creating artifacts. They carry no behavior, trigger, or inclusion policy.
+
+#### Tool
+
+A **tool** is a primitive action that the coding agent can perform on its environment: read a file, run a shell command, edit code, search the web. Tools are provided by the platform, not by the methodology. The coding agent selects which tools to invoke as part of its reasoning loop. Hooks intercept tool execution at the platform level.
+
+#### 1.1.1 Abstract Execution Loop
+
+A user prompt is a **composite input** to the coding agent. It may contain, in any combination: natural language instructions, one or more command triggers (`/gse:plan`, `/gse:review`), references to agents ("ask the security auditor to check this"), and constraints ("don't modify the database schema").
+
+Processing occurs in two phases:
+
+**Phase 1 — Context enrichment (platform, deterministic).** The platform extracts command triggers from the prompt and loads the content of the matching skills into the coding agent's context. If the prompt contains `/gse:plan` and `/gse:produce`, both skill contents are injected. Always-on skills and conditional skills (matched by file patterns or agent decision) are also loaded as applicable. This phase is mechanical — the platform does not reason.
+
+**Phase 2 — Reasoning and execution (LLM, non-deterministic).** The coding agent receives the entire input: the original prompt, the loaded skills, and the pre-existing context (default agent, conversation history, persistent instructions). It reasons about the **totality** of this input and constructs its own execution plan:
+- It decides the **order** in which to process the activities
+- It decides whether to **decompose** into subtasks
+- It decides which **specialized agents** to consult and when
+- It decides whether to **delegate to subagents** for parallel execution
+- It respects the **constraints** expressed in the prompt
+
+**The coding agent is not a command interpreter.** It does not process commands left-to-right like a shell. It is a reasoning system that interprets the user's composite intent and creates its own execution strategy.
+
+```
+User prompt (composite input)
+  │
+  ├─ Phase 1 (platform, deterministic):
+  │    Extract command triggers → Load matching skill(s) into context
+  │    Load always-on skills and conditional skills as applicable
+  │
+  └─ Phase 2 (LLM, reasoning):
+       Interpret the whole (prompt + skills + context)
+         → Build execution plan
+         → Reasoning loop:
+              Sequence activities
+              Invoke tool(s)
+                → Hooks intercept (can block or warn)
+              Load specialized agents if needed
+              Delegate to subagent(s) if decomposition is useful
+              Verify constraints at each step
+         → Continue or respond to user
+```
+
+#### 1.1.2 Claude Code
+
+**Architecture.** Claude Code is a CLI-based coding agent powered by the Claude LLM. It provides built-in tools (`Bash`, `Read`, `Write`, `Edit`, `Grep`, `Glob`, `Agent` for spawning subagents) and can be extended with MCP tools. The system prompt is platform-defined and not directly modifiable. Additional instructions can be appended via `--append-system-prompt`, but the primary extension mechanism is context injection (agents, skills, project instructions).
+
+**Execution loop.** When a session starts:
+
+1. The platform loads **settings** from multiple scopes (user, project, plugins) and merges them.
+2. If a **default agent** is declared in settings (e.g., `{"agent": "gse-orchestrator"}`), its body is loaded as the agent's system prompt for the session.
+3. **CLAUDE.md** files (project root, subdirectories, user-level) are loaded into the context as persistent instructions.
+4. The user types a prompt that may include one or more commands (e.g., `/gse:plan`).
+5. **Phase 1**: For each command that matches a skill trigger, the skill's content is injected into the context.
+6. **Phase 2**: The reasoning loop begins. The coding agent reasons about the full input and executes:
+   - **Before** each tool call, `PreToolUse` hooks fire. If any hook returns exit 2, the tool call is blocked and the feedback is sent to the coding agent.
+   - The tool executes.
+   - **After** each tool call, `PostToolUse` hooks fire (informational).
+   - The coding agent can spawn **subagents** via the `Agent` tool — each runs in an isolated context, optionally on a different LLM model. Multiple subagents can run in parallel.
+7. The loop continues until the task is complete.
+
+```
+Session start
+  → Load settings (user + project + plugins)
+  → Load default agent body (if declared)
+  → Load CLAUDE.md files
+
+User prompt (may include /command triggers)
+  → Phase 1: Load matching skill(s) into context
+  → Phase 2: Reasoning loop:
+      Observe → Reason → Build/update execution plan
+        → Select tool(s)
+          → PreToolUse hooks (can block)
+            → Tool executes
+          → PostToolUse hooks (can warn)
+        → [Optional: spawn subagent(s) with isolated context]
+      → Observe results → Continue or respond
+```
+
+**Artifact delivery mechanisms.** Skills, agents, hooks, and templates can be delivered through several mechanisms:
+
+| Mechanism | Scope | Provides | Shared via git? |
+|-----------|-------|----------|:--------------:|
+| **Plugin** (`.claude-plugin/plugin.json`) | All projects where installed | Skills (namespaced: `/prefix:name`), agents, hooks, templates, settings | Yes (via plugin repo) |
+| **Project directory** (`.claude/`) | One project | Skills (`/name`), agents, hooks (`settings.json`), rules (`rules/*.md`) | Yes |
+| **Project instructions** (`CLAUDE.md`) | One project or subdirectory | Always-on instructions (injected as context) | Yes |
+| **Personal settings** (`.claude/settings.local.json`) | One project, one user | Hooks, permissions, local overrides | No (gitignored) |
+| **User settings** (`~/.claude/settings.json`) | All projects, one user | Hooks, permissions, global preferences | No (local) |
+
+A plugin and a project directory deliver the same types of artifacts. The plugin adds **namespacing** (prevents skill name conflicts), **versioning** (semantic version in manifest), and **distribution** (installable from a repository or marketplace). The project directory is simpler — suitable for project-specific conventions.
+
+**Inclusion policy mapping:**
+
+| Abstract policy | Claude Code mechanism |
+|----------------|----------------------|
+| **Always-on** | Default agent body (via `settings.json` → `"agent"`), `.claude/rules/*.md`, `CLAUDE.md` |
+| **On-demand** | Skill file (`skills/<name>/SKILL.md`), invoked via `/<name>` or `/<prefix>:<name>` |
+| **Contextual** | Specialized agent files (`agents/<name>.md`), loaded by the default agent during reasoning |
+
+#### 1.1.3 Cursor
+
+**Architecture.** Cursor is an IDE-based coding agent (Composer/Agent mode) powered by a configurable LLM. It provides built-in tools (terminal, file editor, codebase search, multi-file editing) and built-in subagents (`Explore`, `Bash`, `Browser`). Custom subagents can be defined in `.cursor/agents/`. Cursor does not have a single system prompt file — persistent instructions are delivered through the rules system (`.mdc` files).
+
+**Execution loop.** When a session starts:
+
+1. The platform scans for **rules**: `.mdc` files with `alwaysApply: true` are loaded immediately. Other rules are indexed by their description and glob patterns for conditional loading.
+2. Plugin configurations are loaded (skills, agents, hooks).
+3. The user types a prompt that may include one or more commands (e.g., `/gse:plan`).
+4. **Phase 1**: If the prompt matches one or more skill triggers, their content is injected into the context. Conditional rules are loaded if relevant files are referenced.
+5. **Phase 2**: The reasoning loop begins. The agent can also autonomously load skills based on relevance:
+   - `preToolUse` hooks fire before tool calls (can block).
+   - The tool executes.
+   - `postToolUse` hooks fire after tool calls (can warn).
+   - The agent can delegate to **subagents** — up to 8 can run in parallel, each with isolated context and optionally in isolated git worktrees.
+6. The loop continues until the task is complete.
+
+```
+Session start
+  → Load rules (alwaysApply: true)
+  → Index conditional rules (by description + globs)
+  → Load plugin configurations
+
+User prompt (may include /command triggers)
+  → Phase 1: Load matching skill(s) into context
+              Load conditional rules if relevant files referenced
+  → Phase 2: Reasoning loop:
+      Observe → Reason → Build/update execution plan
+        → Select tool(s)
+          → preToolUse hooks (can block)
+            → Tool executes
+          → postToolUse hooks (can warn)
+        → [Optional: delegate to subagent(s), up to 8 in parallel]
+      → Observe results → Continue or respond
+```
+
+**Artifact delivery mechanisms:**
+
+| Mechanism | Scope | Provides | Shared via git? |
+|-----------|-------|----------|:--------------:|
+| **Plugin** (`.cursor-plugin/plugin.json`) | All projects where installed | Skills, agents, rules (.mdc), hooks, MCP servers | Yes (via plugin repo) |
+| **Project directory** (`.cursor/`) | One project | Skills (`skills/`), agents (`agents/`), rules (`rules/*.mdc`), hooks (`hooks.json`) | Yes |
+| **Project instructions** (`AGENTS.md`) | One project | Always-on instructions (markdown alternative to rules) | Yes |
+| **Legacy rules** (`.cursorrules`) | One project | Always-on instructions (single file, community convention) | Yes |
+| **User plugins** (`~/.cursor/plugins/`) | All projects, one user | Global plugins | No (local) |
+
+A plugin and a project directory deliver the same types of artifacts. The plugin adds **marketplace distribution** and can bundle **MCP servers**. The project directory is simpler and project-specific.
+
+**Inclusion policy mapping:**
+
+| Abstract policy | Cursor mechanism |
+|----------------|-----------------|
+| **Always-on** | `.mdc` file with `alwaysApply: true`, `.cursorrules`, `AGENTS.md` |
+| **On-demand** | Skill file (`skills/<name>/SKILL.md`), invoked via `/<name>` or by agent decision |
+| **Contextual** | `.mdc` file with `globs` patterns (auto-loaded when matching files are referenced), or `alwaysApply: false` (agent reads description and decides) |
+
+#### 1.1.4 GSE-One: Mono-Plugin Architecture
+
+GSE-One delivers its methodology as a **single plugin directory** (`plugin/`) that works on both Claude Code and Cursor. Shared artifacts (skills, agents, templates) are identical across platforms. Platform-specific artifacts coexist in the same directory — each platform loads only the files it recognizes and silently ignores the rest.
+
+| Artifact | Files | Claude Code | Cursor |
+|----------|-------|:-----------:|:------:|
+| Skills (22) | `skills/<name>/SKILL.md` | Loaded | Loaded |
+| Agents (9) | `agents/<name>.md` | Loaded | Loaded |
+| Templates (15) | `templates/*` | Loaded | Loaded |
+| Always-on skill (methodology) | `agents/gse-orchestrator.md` | Via `settings.json` → `"agent"` | Via `rules/000-gse-methodology.mdc` (identical body) |
+| Hooks (3) | `hooks/hooks.claude.json` | Loaded | Ignored |
+| Hooks (3) | `hooks/hooks.cursor.json` | Ignored | Loaded |
+| Manifest | `.claude-plugin/plugin.json` | Loaded | Ignored |
+| Manifest | `.cursor-plugin/plugin.json` | Ignored | Loaded |
+| Settings | `settings.json` | Loaded | Ignored |
+
+Note: "orchestrator" is a GSE-One convention. In Claude Code, it is the session's default agent. In Cursor, it is an always-on rule. Neither platform has a formal "orchestrator" concept.
+
+### 1.2 GSE-One Overview
+
+GSE-One (Generic Software Engineering One) is an AI engineering companion that guides users through the full software development lifecycle. It is implemented as a plugin for AI coding agents (Claude Code, Cursor, or any compatible agent-based IDE) and provides 22 commands covering planning, requirements, design, production, quality, delivery, and capitalization.
 
 GSE-One is designed for users of **any expertise level** — from beginners building their first project to experienced engineers managing complex applications. The agent adapts its language, decisions, and level of autonomy to the user's profile, and progressively transfers knowledge so the user grows alongside the project.
 
@@ -41,7 +275,7 @@ The canonical command prefix is **`/gse:`**.
 
 > **Note:** All artefact metadata (YAML frontmatter), git operations, and state management are handled automatically by the GSE-One agent. Users focus on intent and validation — the agent handles the mechanics.
 
-### 1.1 Design Philosophy
+### 1.3 Design Philosophy
 
 GSE-One is built for a fundamental asymmetry: the **user has the intent** but the **agent has the technical depth**. The methodology bridges this gap through seven pillars:
 
@@ -59,7 +293,7 @@ GSE-One is built for a fundamental asymmetry: the **user has the intent** but th
 
 7. **AI integrity safeguards** — The agent is a generative AI with inherent limitations (hallucinations, complaisance, outdated knowledge). GSE-One protects the user from these failures through explicit confidence levels on every recommendation, verification gates for critical assertions, adversarial self-review (devil's advocate), source citation, and active encouragement of user pushback when passive acceptance is detected. (P15, P16)
 
-### 1.2 Key Concepts
+### 1.4 Key Concepts
 
 | Concept | Summary |
 |---------|---------|
@@ -74,6 +308,22 @@ GSE-One is built for a fundamental asymmetry: the **user has the intent** but th
 | **Mono-repo** | GSE-One manages one repository at a time. Multi-component projects should use a mono-repo. |
 | **Confidence level** | Every agent recommendation carries a confidence tag: Verified, High, Moderate, or Low. |
 | **Devil's advocate** | During review, the agent challenges its own productions — hunting hallucinations, unverified claims, and missing alternatives. |
+
+### 1.5 Agent Roles
+
+An agent is a named role that shapes how the coding agent reasons about a specific concern (see the Agent concept defined earlier in this section). GSE-One defines 9 agents — one orchestrator and 8 specialized roles. Each specialized agent is invoked by the orchestrator during the activities that require its expertise:
+
+| Agent | Role | Invoked during |
+|-------|------|----------------|
+| **gse-orchestrator** | Main identity. Manages lifecycle, state, decisions, and dispatches to specialized agents. | Always active |
+| **requirements-analyst** | Ensures requirements are complete, testable, and traceable. | `/gse:reqs`, `/gse:review` |
+| **architect** | Evaluates architecture decisions for quality, scalability, maintainability. | `/gse:design`, `/gse:review` |
+| **test-strategist** | Ensures test coverage, strategy, and evidence quality. | `/gse:tests`, `/gse:review`, `/gse:produce` |
+| **code-reviewer** | Reviews code for quality, security, maintainability. | `/gse:review` |
+| **security-auditor** | Identifies security vulnerabilities and risks. | `/gse:design`, `/gse:review` |
+| **ux-advocate** | Evaluates user experience and accessibility. | `/gse:preview`, `/gse:review` |
+| **guardrail-enforcer** | Monitors and enforces guardrail compliance (P11). Cross-cutting, always active. | All activities |
+| **devil-advocate** | Challenges the agent's own productions for AI integrity (P16). | `/gse:review` |
 
 ---
 
@@ -311,23 +561,34 @@ Every production task is performed in an isolated git environment. The `main` br
 See Section 10 for the full branching model.
 
 ### P13 — Event-Driven Behaviors (Hooks)
-Some GSE-One behaviors are triggered automatically by events rather than user commands. These hooks ensure consistency without relying on user discipline:
+GSE-One uses two categories of automated behaviors: **system hooks** (deterministic, rigid, executed by the platform before/after tool calls) and **agent behaviors** (adaptive, context-aware, executed by the orchestrator agent during activities).
 
-| Hook | Trigger | Action | Principle Enforced |
-|------|---------|--------|--------------------|
-| **Auto-commit on pause** | User pauses work or session ends | Checkpoint commit with WIP status | P1 (incremental), P12 (version control) |
-| **Guardrail on push** | `git push` command | Validate branch naming, check for secrets, verify review status | P11 (guardrails), P12 (version control) |
-| **Frontmatter validation** | Artefact file save | Verify YAML frontmatter completeness (type, sprint, status, traces) | P3 (artefacts), P6 (traceability) |
-| **Health warning on commit** | `git commit` command | Check complexity budget, trace link consistency, orphan files | P10 (complexity), P6 (traceability) |
+#### System hooks
+
+System hooks are reserved for actions where deterministic enforcement is critical — the risk of the AI forgetting or adapting incorrectly is too high. They are implemented as `PreToolUse`/`PostToolUse` commands in Claude Code and Cursor:
+
+| Hook | Trigger | Action | Level | Principle Enforced |
+|------|---------|--------|-------|--------------------|
+| **Protect main** | `git commit` on `main` branch | Block the commit, send feedback to agent | Hard (exit 2) | P12 (version control) |
+| **Block force-push** | `git push --force` | Block the push, send feedback to agent | Emergency (exit 2) | P12 (version control) |
+| **Review findings on push** | `git push` | Warn if `review_findings_open > 0` in `status.yaml` | Informational (exit 0) | P11 (guardrails), P6 (traceability) |
+
+**Hook failure handling:** If a hook command fails (e.g., `status.yaml` not found), the failure is non-blocking — the user's work is not interrupted.
+
+System hooks are configurable via `.gse/config.yaml` → `hooks` section (see Section 13).
+
+#### Agent behaviors
+
+The following behaviors are executed by the orchestrator agent during activities. They are adaptive (calibrated to user expertise) and context-aware (the agent decides when they apply):
+
+| Behavior | When | Action | Principle Enforced |
+|----------|------|--------|--------------------|
+| **Auto-commit on pause** | `/gse:pause` or session end | Checkpoint commit with WIP status | P1 (incremental), P12 (version control) |
+| **Frontmatter validation** | Artefact save during any activity | Verify YAML frontmatter completeness (type, sprint, status, traces) | P3 (artefacts), P6 (traceability) |
+| **Health check** | Before `/gse:deliver`, during `/gse:review` | Warn if health score < 5, check complexity budget | P10 (complexity), P6 (traceability) |
 | **Sprint boundary** | Sprint start/end | Generate sprint artefact templates, archive previous sprint | P1 (iterative), P5 (planning) |
-| **Dependency addition** | New package added to manifest | Log complexity cost, check budget, update ledger | P10 (complexity budget) |
+| **Dependency tracking** | New package detected during `/gse:produce` | Log complexity cost, check budget, update ledger | P10 (complexity budget) |
 | **Risk escalation** | High-risk condition detected during any activity | Interrupt current flow, trigger Gate interaction | P7 (risk classification) |
-
-**Hook suppression:** Individual hooks can be temporarily suppressed with documented rationale. Suppression is an Inform-tier decision logged in the sprint activity. Example: "Suppressing frontmatter validation for imported files — will add frontmatter in TASK-045."
-
-**Hook failure handling:** If a hook fails (e.g., cannot validate frontmatter due to malformed YAML), the agent reports the failure without blocking the user's work. Hook failures are logged and added to the next sprint's backlog as maintenance tasks.
-
-All hooks are configurable via `.gse/config.yaml` → `hooks` section (see Section 13).
 
 ### P14 — Knowledge Transfer (Tutoring)
 GSE-One acts as a **tutor** alongside its engineering companion role. Knowledge transfer operates in two complementary modes:
@@ -542,6 +803,8 @@ The pushback mechanism is calibrated:
 ---
 
 ## 3. Activities (Commands)
+
+> **Terminology:** An activity is a user-facing action invoked via a `/gse:*` command. Each activity is delivered to the coding agent as a skill — a technical artifact with content, trigger, and inclusion policy. See the Coding Agents and Plugin Architecture section of this document for the formal definitions and platform mapping.
 
 ### 3.1 Orchestration & Session
 
@@ -1717,7 +1980,7 @@ lifecycle:
       # order: [reqs, design, preview, tests, plan, produce, review, fix, deliver]
 
 interaction:
-  verbosity: concise                   # concise | standard | verbose
+  verbosity: standard                   # concise | standard | verbose
   language: auto                       # auto (from HUG) | en | fr | de | ...
 
 decisions:
@@ -1739,10 +2002,9 @@ health:
   # e.g., [test_pass_rate, design_debt] for documentation projects
 
 hooks:
-  auto_commit_on_pause: true           # commit uncommitted work when /gse:pause
-  guardrail_on_push: true              # check review findings before git push
-  frontmatter_validation: true         # validate YAML frontmatter on artefact save
-  health_warning_on_commit: true       # warn if health score < 5 before commit
+  protect_main: true                   # block direct commits to main branch (Hard guardrail)
+  block_force_push: true               # block git push --force (Emergency guardrail)
+  review_findings_on_push: true        # warn if open review findings before push
 
 git:
   strategy: worktree                   # worktree | branch-only | none
@@ -1755,7 +2017,7 @@ git:
   tag_on_deliver: true                 # Tag main with semantic version on deliver
   cleanup_on_deliver: true             # Delete merged branches and worktrees after deliver
   pre_merge_check: ""                  # optional — e.g., "npm test"
-  post_tag_hook: ""                    # optional — e.g., "./scripts/deploy.sh staging"
+  post_tag_hook: ""                    # optional — e.g., "python scripts/deploy.py staging"
   rollback_on_deploy_failure: true     # auto-propose rollback if post_tag_hook fails
   backup_before_destructive: true      # create safety tags before merge/delete (Section 10.6)
   backup_retention_days: 30            # how long to keep backup tags
@@ -2116,5 +2378,6 @@ AD-HOC              /gse:task
 | 0.4.0 | 2026-04-10 | Added: P12 (Version Control Isolation), P13 (Hooks), full git branching model with worktrees, merge strategy as Gate decision, git-specific guardrails, git hygiene in health dashboard, worktree state tracking, commit convention, branch naming convention, artefact ID allocation scheme. Moved Preview to own section. Added `gse.branch` to artefact metadata. Integrated git actions into all relevant activities. |
 | 0.5.0 | 2026-04-10 | Renamed to GSE-One, `/gse:` prefix. P7+P8+P11 unified as risk analysis chain. P10 rewritten. P12 merge adapted to user expertise. P14 (Knowledge Transfer) + `/gse:learn`. Learning notes in `docs/learning/`. Extended `/gse:collect` with external sources. Provenance traceability. 20 commands. |
 | 0.6.0 | 2026-04-10 | Major consolidation (see v0.6 changelog for details). |
+| 0.9.0 | 2026-04-12 | **Conceptual framework.** Added §1.1 (Coding Agents and Plugin Architecture): abstract concepts (coding agent, agent, skill with inclusion policies, hook, template, tool), system prompt, subagents. Platform-specific sections for Claude Code and Cursor (execution loops, artifact delivery mechanisms, inclusion policy mapping). §1.1.3 GSE-One mono-plugin architecture mapping. **P13**: reclassified hooks — 7 hooks → 3 system hooks (protect main, block force-push, review findings on push) + 6 agent behaviors. Hooks rewritten as cross-platform Python commands with correct exit codes (exit 2 for blocking, stderr for feedback). **Config §13.1**: hooks section aligned (3 keys). **Cross-platform**: all documentation, templates, and examples neutralized for macOS/Linux/Windows. Added §1.5 Agent Roles to spec. |
 | 0.8.0 | 2026-04-11 | **Implementation alignment pass.** TIME→COMPLEXITY: replaced `stale_sprint_days` with `stale_sprint_sessions` (Sections 13.1, 14.3), Sprint redefined as complexity-budgeted (not time-boxed) in Key Concepts and Glossary. **P4**: added "no implicit consent" and "escalation when uncertain" rules. **P5**: added 4-level planning taxonomy, 5 re-planning triggers, planning debt concept. **P6**: replaced flat `traces: []` with 4 typed trace links (`derives_from`, `implements`, `decided_by`, `related_to`) + bidirectional consistency rule — cascaded to all YAML examples (Sections 4.6, 6.3, 12.2, 12.3). **P7**: added composite risk rule (3+ Moderate = Gate), unknowns-default-to-High rule. **P8**: added confidence flagging on consequence projections, "no false certainty" rule. **P10/Section 8**: expanded complexity cost table (8→14 items), added sprint type budgets (15/12/8), complexity debt, simplification credit, zero-cost items. **P13**: expanded hooks (4→7 types), added hook suppression and failure handling. **Section 4**: added `inventory.yaml` as COLLECT output, "Reference only" as 4th reusability option. **Section 4.7**: added GAP-NN identifiers for assess gaps. **Section 7**: added computation formulas for all 8 health dimensions, alert threshold (< 7/10), replaced "12 days" with ">2 sprints". **Section 12.4**: added P16 tracking fields (never_discusses, terse_responses, never_modifies, never_questions), sessions_without_progress, review_findings_open. **Section 15**: added 5 glossary terms (composite risk, hook suppression, inventory, planning debt, simplification credit). |
 | 0.7.0 | 2026-04-11 | **41-issue fix pass.** CRITICAL: fixed health dim count (7→8 everywhere), removed infeasible timing detection in P16. HIGH: added /gse:go decision logic (14.3) with stale sprint detection, safety/recovery mechanism (10.6) with backup tags, visual testing best-effort caveat (6.3), status.yaml schema (12.4), checkpoint schema (12.5), state loading priority (12.6), assess methodology (4.7), doc-as-first-class artefact, audience note for beginners. MEDIUM: 13.1 config section, P11 dedup, complexity ranges, team matching algorithm, concurrent access, tech stack drift detection, hooks config, health config, dependency audit, min project size note, ad-hoc task lifecycle. LOW: category headers, TOC fixes, artefact spelling, Discuss standardization, changelog note. | **Overview** rewritten (7 pillars + Key Concepts). **Unified backlog** (`/gse:backlog`, TASK as single ID, git state per-TASK). **AI Integrity** (P15 confidence levels/verification gates/source citation, P16 devil's advocate/user pushback). **Testing Strategy** (Section 6): test pyramid by domain, environment auto-setup, visual testing with screenshots/video, test campaign reports as traced artefacts, coverage model (code + requirements + risk), expertise-adapted testing behavior. **Health** expanded to 8 dimensions (+AI integrity). `testing` config section. `tests/evidence/` in project layout. `test-campaign` artefact type. TOC, principle grouping (4 categories, 16 principles). Adopt mode, lightweight mode, team profiles, non-code config, mono-repo, GitHub sync, COMPOUND 3 axes. 15 sections, 22 commands, 8 health dimensions. |

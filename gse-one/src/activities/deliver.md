@@ -179,12 +179,8 @@ If `config.yaml` field `post_tag_hook` is configured:
 
 Remove backup tags older than `backup_retention_days` (default: 30):
 
-```
-git tag -l "gse-backup/*" | while read tag; do
-  # check tag date, delete if older than retention period
-  git tag -d "$tag"
-done
-```
+1. List tags matching `gse-backup/*` with `git tag -l "gse-backup/*"`
+2. For each tag older than the retention period, delete it with `git tag -d <tag>`
 
 ### Step 9 — Finalize
 

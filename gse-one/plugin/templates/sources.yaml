@@ -4,7 +4,7 @@
 
 sources:
   - id: SRC-001
-    origin: ~/my-other-project/src/auth/
+    origin: ~/my-other-project/src/auth/  # use absolute path on Windows
     type: local                        # local | github
     evaluated: 2026-04-10
     sprint: 1

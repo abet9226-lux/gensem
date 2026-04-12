@@ -89,7 +89,9 @@ Evaluate states **in order** — the first matching row wins.
 **Lifecycle guardrails (Hard — cannot be skipped):**
 1. **No PRODUCE without REQS** — No TASK can move to `in-progress` unless at least one REQ- artefact with testable acceptance criteria is traced to it. REQS is test-driven: acceptance criteria ARE the future validation test specs.
 2. **No PRODUCE without test strategy** — The test approach (verification from DESIGN + validation from REQS acceptance criteria) must be defined before coding starts. Test strategy comes AFTER DESIGN and PREVIEW.
-3. **Supervised mode enforcement** — When `decision_involvement: supervised`, ANY technical choice during PRODUCE (library, data format, folder structure, persistence, API design) MUST be a Gate decision. The agent MUST NOT make these choices silently.
+
+**Decision tier override:**
+3. **Supervised mode** — When `decision_involvement: supervised`, ALL technical choices during PRODUCE are escalated to **Gate-tier** decisions. The agent presents options and waits for user confirmation.
 
 Present the proposal and wait for user confirmation before executing.
 

@@ -44,7 +44,7 @@ Guardrails operate at three severity levels. Soft guardrails advise. Hard guardr
    | Using `--skip-tests` during PRODUCE | **Gate** | Require confirmation + DEC- journal entry + health score penalty. |
    | Starting REVIEW without test evidence (`test_evidence` absent on TASK) | **Hard** | Block. Run tests first. "Tests must pass before review." |
    | Starting DELIVER with uncovered must-priority REQ (no TST- traced to it) | **Hard** | Block. Write tests first. "All must-priority requirements need test coverage." |
-   | `decision_involvement: supervised` + technical choice during PRODUCE | **Gate** | Every technical choice (lib, format, structure, persistence) must be presented as a Gate decision. |
+   | `decision_involvement: supervised` + technical choice during PRODUCE | **Gate (decision tier override)** | ALL technical choices (lib, format, structure, persistence, API design) are escalated to Gate-tier. The agent presents options and waits for confirmation — not a Hard guardrail (condition-based block) but a tier override rule. |
 
 4. **Project-specific guardrails:**
 

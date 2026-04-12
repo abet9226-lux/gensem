@@ -34,8 +34,8 @@ Before executing, read:
 
 Before starting ANY task, verify these conditions. If any check fails, **STOP and do not proceed**.
 
-1. **Requirements check** — Verify that `docs/sprints/sprint-{NN}/reqs.md` exists and contains at least one REQ- artefact traced to the TASK about to start. If missing: report "Requirements not defined for this task. I need to write down what the app should do first." Then run REQS.
-2. **Test strategy check** — Verify that a test strategy exists (`docs/sprints/sprint-{NN}/test-strategy.md` or a `tests` section in `plan.md`). If missing: report "Test strategy not defined. I need to describe how we'll verify each feature works." Then run TESTS `--strategy`.
+1. **Requirements check** — Verify that `docs/sprints/sprint-{NN}/reqs.md` exists and contains at least one REQ- artefact traced to the TASK about to start. If missing: report "Requirements not defined for this task. I need to write down what the app should do first." Then run REQS. **Exception: `artefact_type: spike`** — skip this check (spikes are exploratory experiments).
+2. **Test strategy check** — Verify that a test strategy exists (`docs/sprints/sprint-{NN}/test-strategy.md` or a `tests` section in `plan.md`). If missing: report "Test strategy not defined. I need to describe how we'll verify each feature works." Then run TESTS `--strategy`. **Exception: `artefact_type: spike`** — skip this check.
 **Decision tier override:**
 3. **Supervised mode** — If `profile.decision_involvement` is `supervised`, ALL technical choices in this TASK are escalated to **Gate-tier** decisions. This includes: library/dependency selection, data format, folder structure, persistence strategy, API design, naming conventions. The agent MUST present options and wait for user confirmation — it MUST NOT make these choices silently.
 

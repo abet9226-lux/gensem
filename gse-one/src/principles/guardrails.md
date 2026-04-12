@@ -39,8 +39,8 @@ Guardrails operate at three severity levels. Soft guardrails advise. Hard guardr
 
    | Condition | Level | Action |
    |-----------|-------|--------|
-   | Starting PRODUCE without requirements (`reqs.md` absent or no REQ- with testable acceptance criteria traced to TASK) | **Hard** | Block. Run REQS first. "Requirements with testable acceptance criteria must be defined and validated before coding starts." REQS is test-driven: acceptance criteria ARE the future validation test specs. |
-   | Starting PRODUCE without test strategy (`test-strategy.md` absent) | **Hard** | Block. Run TESTS `--strategy` first. Test strategy comes AFTER DESIGN and PREVIEW (LC02 order: REQS → DESIGN → PREVIEW → TESTS → PRODUCE). Validation tests derive from REQS acceptance criteria, verification tests derive from DESIGN. |
+   | Starting PRODUCE without requirements (`reqs.md` absent or no REQ- with testable acceptance criteria traced to TASK) | **Hard** | Block. Run REQS first. "Requirements with testable acceptance criteria must be defined and validated before coding starts." REQS is test-driven: acceptance criteria ARE the future validation test specs. **Exception: `artefact_type: spike`** — spikes bypass this guardrail (complexity-boxed experiments, max 3 points, non-deliverable, must produce DEC-). |
+   | Starting PRODUCE without test strategy (`test-strategy.md` absent) | **Hard** | Block. Run TESTS `--strategy` first. Test strategy comes AFTER DESIGN and PREVIEW (LC02 order: REQS → DESIGN → PREVIEW → TESTS → PRODUCE). Validation tests derive from REQS acceptance criteria, verification tests derive from DESIGN. **Exception: `artefact_type: spike`** — spikes bypass this guardrail. |
    | Using `--skip-tests` during PRODUCE | **Gate** | Require confirmation + DEC- journal entry + health score penalty. |
    | Starting REVIEW without test evidence (`test_evidence` absent on TASK) | **Hard** | Block. Run tests first. "Tests must pass before review." |
    | Starting DELIVER with uncovered must-priority REQ (no TST- traced to it) | **Hard** | Block. Write tests first. "All must-priority requirements need test coverage." |

@@ -434,6 +434,7 @@ Each TASK carries an `artefact_type` indicating what kind of deliverable it prod
 | `doc` | Documentation, learning notes |
 | `config` | Configuration, infrastructure |
 | `import` | Imported/adapted external source |
+| `spike` | Exploratory experiment — throwaway code to answer a technical question. **Complexity-boxed** (max 3 points). **Non-deliverable** — cannot be merged to main. Must produce a DEC- artefact documenting the question, approach, and answer. Bypasses REQS and TESTS guardrails. If the spike yields reusable code, a normal TASK must be created to implement it properly with REQS/TESTS. For beginners: Gate confirmation required ("This is an experiment — the code won't be kept. Are you sure?"). |
 
 **Trace link types:** Every artefact's `traces` field uses typed links to express the nature of each relationship:
 

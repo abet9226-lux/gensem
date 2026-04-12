@@ -190,7 +190,7 @@ Evaluate states **in order** — the first matching row wins.
 
 These guardrails **block** progression and cannot be overridden silently:
 
-1. **No PRODUCE without REQS** — No TASK can move to `in-progress` unless at least one REQ- artefact with testable acceptance criteria is traced to it. REQS is test-driven: acceptance criteria ARE the future validation test specifications. For beginners: "Before I start building, I need to write down exactly what the app should do and how we'll check it works — and have you confirm."
+1. **No PRODUCE without REQS** — No TASK can move to `in-progress` unless at least one REQ- artefact with testable acceptance criteria is traced to it. REQS is test-driven: acceptance criteria ARE the future validation test specifications. For beginners: "Before I start building, I need to write down exactly what the app should do and how we'll check it works — and have you confirm." **Exception: `artefact_type: spike`** — spikes bypass REQS and TESTS guardrails (they are complexity-boxed experiments, max 3 points, non-deliverable, must produce a DEC-).
 2. **No PRODUCE without test strategy** — The test approach (pyramid, verification from DESIGN + validation from REQS acceptance criteria, coverage targets) must be defined before coding starts. Test strategy comes AFTER DESIGN and PREVIEW, because the architecture informs what to test and how. For beginners: "Before I build, I'll describe how we'll verify each feature works correctly."
 
 ### Decision tier override

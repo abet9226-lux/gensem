@@ -14,6 +14,7 @@ Arguments: $ARGUMENTS
 | `--type TYPE`      | Force artefact type (feat/fix/doc/test/refactor/task) |
 | `--complexity N`   | Override complexity estimate (1-5) |
 | `--no-review`      | Mark task as not requiring review (for trivial tasks) |
+| `--spike`          | Create a spike (exploratory experiment). Complexity-boxed (max 3 points), non-deliverable, bypasses REQS/TESTS guardrails, must produce a DEC- |
 | `--help`           | Show this command's usage summary |
 
 ## Prerequisites
@@ -30,11 +31,13 @@ Before executing, read:
 
 1. Parse the task description from `$ARGUMENTS`
 2. Infer artefact type from description if `--type` not provided:
+   - `--spike` flag → `spike`
    - Keywords like "fix", "bug" -> `fix`
    - Keywords like "add", "create", "implement" -> `feat`
    - Keywords like "document", "readme", "comment" -> `doc`
    - Keywords like "test", "spec" -> `test`
    - Keywords like "refactor", "clean", "reorganize" -> `refactor`
+   - Keywords like "spike", "experiment", "try", "explore", "prototype" -> `spike`
    - Default: `task`
 3. Estimate complexity (1-5) if `--complexity` not provided:
    - 1: trivial change (typo, config tweak)
@@ -70,6 +73,30 @@ TASK-{next_id}:
   requires_review: {true unless --no-review or complexity <= 1}
   created_at: {timestamp}
 ```
+
+**If `artefact_type: spike`:**
+```yaml
+TASK-{next_id}:
+  title: "{description}"
+  artefact_type: spike
+  question: "{the technical question to answer}"
+  complexity_cap: {estimated, max 3}
+  complexity: {estimated}
+  sprint: S{current_NN}
+  status: planned
+  source: ad-hoc
+  requires_review: false
+  deliverable: false          # cannot be merged to main
+  outcome: pending            # → yes / no / partial after completion
+  created_at: {timestamp}
+```
+
+**Spike rules:**
+1. **Complexity-boxed** — maximum 3 points. If estimated > 3, reject: "A spike must stay small (max 3 complexity points). Split into a smaller experiment or create a normal task."
+2. **Non-deliverable** — the spike branch is deleted after completion. Code cannot be merged to main. If reusable code emerges, create a normal TASK to implement properly with REQS/TESTS.
+3. **Must produce DEC-** — at completion, the agent creates a DEC- artefact documenting: the question, the approach tried, the answer (yes/no/partial), and next steps.
+4. **Beginner Gate** — if `it_expertise: beginner`, present a Gate before starting: "This is an experiment — the code won't be kept. It's useful to test an idea before committing to it. Should I proceed?"
+5. **Bypasses REQS/TESTS guardrails** — the spike does not need requirements or test strategy. The question IS the requirement; the experiment IS the test.
 
 ### Step 4 — Git Setup
 

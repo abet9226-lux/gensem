@@ -2347,7 +2347,16 @@ When invoked, `/gse:go` follows this decision tree:
 If `.gse/` exists, scan for unsaved work from a previous session that ended without `/gse:pause`:
 1. Check all active worktrees listed in `config.yaml → git.worktree_dir` and the main directory for uncommitted changes
 2. If found: present a Gate decision — **Recover** (auto-commit checkpoint) / **Review first** (show diff) / **Discard** (confirm twice) / **Skip** (leave uncommitted). For beginners: "I found unsaved work from a previous session. Should I save it before we continue?"
-3. If nothing found: proceed silently to Step 2
+3. If nothing found: proceed to Step 1.6
+
+**Step 1.6 — Dependency vulnerability check:**
+
+If `config.yaml → dependency_audit: true` (default for projects with package manifests):
+1. Run the appropriate audit command (`npm audit` / `pip-audit` / `cargo audit` / equivalent)
+2. If **critical** vulnerabilities found → Soft guardrail: warn and suggest update
+3. If no vulnerabilities or low-severity only → proceed silently to Step 2
+
+This runs at **every session start**, not just during `/gse:tests`, to catch vulnerabilities disclosed between sprints.
 
 **Step 2 — Determine next action:**
 

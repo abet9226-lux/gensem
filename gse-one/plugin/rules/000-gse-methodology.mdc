@@ -167,7 +167,14 @@ Scan for uncommitted changes from a previous crashed session:
 1. Check each worktree listed in `config.yaml → git.worktree_dir` (default `.worktrees/`) for uncommitted changes.
 2. Check the main working directory (`git status`).
 3. If uncommitted changes found → Gate decision: **Recover** (auto-commit checkpoint) / **Review first** (show diff) / **Discard** (confirm twice) / **Skip** (leave uncommitted). For beginners: "I found unsaved work from a previous session. Should I save it before we continue?"
-4. If no uncommitted changes → proceed silently to Step 2.
+4. If no uncommitted changes → proceed to Step 1.6.
+
+### Step 1.6 — Dependency vulnerability check
+
+If `config.yaml → dependency_audit: true` (default for projects with package manifests):
+1. Run the appropriate audit command: `npm audit` / `pip-audit` / `cargo audit` / equivalent.
+2. If **critical** vulnerabilities found → Soft guardrail: warn and suggest update. For beginners: "I found a security issue in one of the tools this project uses. I recommend updating it."
+3. If no vulnerabilities or only low-severity → proceed silently to Step 2.
 
 ### Step 2 — Determine next action
 

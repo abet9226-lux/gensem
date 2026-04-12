@@ -58,7 +58,16 @@ If `.gse/` exists, scan for unsaved work before proceeding:
      - **Review first** — Show the diff before committing
      - **Discard** — Discard uncommitted changes (confirm twice — destructive)
      - **Skip** — Continue without committing (changes remain uncommitted)
-4. **If no uncommitted changes** — Proceed silently (no message).
+4. **If no uncommitted changes** — Proceed to Step 2.5.
+
+### Step 2.5 — Dependency Vulnerability Check
+
+If `config.yaml → dependency_audit: true` (default for projects with package manifests):
+
+1. **Detect package manager** — Look for `package-lock.json` / `yarn.lock` (npm audit), `requirements.txt` / `pyproject.toml` (pip-audit), `Cargo.lock` (cargo audit), `go.sum` (govulncheck).
+2. **Run audit** — Execute the appropriate audit command.
+3. **If critical vulnerabilities found** — Soft guardrail: report the vulnerability and suggest updating. For beginners: "I found a security issue in one of the tools this project uses. I recommend updating it before we continue."
+4. **If no vulnerabilities or low-severity only** — Proceed silently to Step 3.
 
 ### Step 3 — Determine Next Action (Decision Tree)
 

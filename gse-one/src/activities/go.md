@@ -64,10 +64,16 @@ If `.gse/` exists, scan for unsaved work before proceeding:
 
 Read `status.yaml` fields: `current_sprint`, `lifecycle_phase`, `last_activity`, `last_activity_timestamp`.
 
+Evaluate states **in order** — the first matching row wins.
+
 | Current State | Proposed Action |
 |---------------|-----------------|
 | No sprint defined | Sub-decision below |
 | Plan exists, not approved | Resume PLAN — present plan summary, ask for approval Gate |
+| Plan approved, **no requirements** (`reqs.md` absent or empty) | Start REQS — define acceptance criteria, data rules, edge cases for each planned TASK. **Hard guardrail: PRODUCE MUST NOT start until REQS exist.** |
+| Reqs done, **no test strategy** (no `test-strategy.md`) | Start TESTS `--strategy` — define what to test, test pyramid, coverage targets. Traced to REQ- IDs. |
+| Reqs + test strategy done, **no design** (optional) | If tasks involve architecture decisions: start DESIGN. Otherwise: proceed to PRODUCE. |
+| Tasks ready (reqs + test strategy exist), none in-progress | Start PRODUCE on first planned TASK |
 | Tasks with status `in-progress` | Resume PRODUCE — show current task, propose continuation |
 | All sprint tasks `done`, no review | Start REVIEW — propose `/gse:review` |
 | Review done, fixes pending | Start FIX — propose `/gse:fix` |
@@ -78,6 +84,11 @@ Read `status.yaml` fields: `current_sprint`, `lifecycle_phase`, `last_activity`,
 1. If `it_expertise: beginner` and `current_sprint: 0` (first time) → start **Intent-First mode** (Step 7)
 2. If the project has < 5 actual project files (using Step 1 exclusion rules) → propose **Lightweight mode** (Step 6)
 3. Otherwise → start full **LC01**: `/gse:collect` > `/gse:assess` > `/gse:plan --strategic`
+
+**Lifecycle guardrails (Hard — cannot be skipped):**
+1. **No PRODUCE without REQS** — No TASK can move to `in-progress` unless at least one REQ- artefact is traced to it. If the agent attempts to start coding without requirements, it MUST stop and run REQS first.
+2. **No PRODUCE without test strategy** — The test approach must be defined before coding starts. Tests are written FROM requirements, not FROM code.
+3. **Supervised mode enforcement** — When `decision_involvement: supervised`, ANY technical choice during PRODUCE (library, data format, folder structure, persistence, API design) MUST be a Gate decision. The agent MUST NOT make these choices silently.
 
 Present the proposal and wait for user confirmation before executing.
 

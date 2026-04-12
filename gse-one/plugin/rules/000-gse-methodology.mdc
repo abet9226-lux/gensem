@@ -64,11 +64,19 @@ When `profile.it_expertise` is `beginner`, apply these rules to ALL chat output 
 | `/gse:collect` | "I'll look at what we have" |
 | `/gse:assess` | "I'll figure out what's missing" |
 | `/gse:plan` | "I'll organize the work" |
-| `/gse:reqs` | "I'll write down what the app should do" |
+| `/gse:reqs` | "I'll write down what the app should do and ask you to confirm" |
+| `/gse:design` | "I'll decide how to structure the app" |
+| `/gse:tests --strategy` | "I'll describe how we'll verify each feature works" |
 | `/gse:produce` | "I'll build it" |
 | `/gse:review` | "I'll check my work" |
+| `/gse:fix` | "I'll fix what was found during review" |
 | `/gse:deliver` | "I'll finalize the result" |
 | `/gse:compound` | "I'll review what we learned" |
+| `reqs.md` | "the description of what the app should do" |
+| `test-strategy.md` | "the verification plan" |
+| `design.md` | "the app structure decisions" |
+| `acceptance criteria` | "how we'll know each feature is done" |
+| `traceability` | "linking each piece back to its purpose" |
 | `Gate decision` | "I need your decision" |
 | `complexity budget` | "the amount of new things we can add" |
 | `worktree` | "a separate workspace" |
@@ -106,17 +114,31 @@ Traces: <artefact IDs>
 
 ### Step 2 — Determine next action
 
+Evaluate states **in order** — the first matching row wins.
+
 | Current state | Next action |
 |--------------|-------------|
 | No sprint + `it_expertise: beginner` | **Intent-First mode**: elicit intent conversationally ("What would you like to build?"), reformulate in plain language, translate to goals. No technical output, no file names, no command names. Then transition to LC01 with plain-language phase names. |
 | No sprint + non-beginner | LC01: `COLLECT` > `ASSESS` > `PLAN` |
 | Sprint, plan not approved | Resume `PLAN` |
+| Sprint, plan approved, **no requirements** (`reqs.md` absent or empty) | Start `REQS` — define acceptance criteria, data rules, edge cases for each planned TASK. **Hard guardrail: PRODUCE MUST NOT start until REQS exist.** |
+| Sprint, reqs done, **no test strategy** (no `test-strategy.md` or `tests` section in plan) | Start `TESTS --strategy` — define what to test, test pyramid, coverage targets. Traced to REQ- IDs. |
+| Sprint, reqs + test strategy done, **no design** (optional — skip for small/simple tasks) | If tasks involve architecture decisions (new data model, API design, component structure): start `DESIGN`. Otherwise: proceed to PRODUCE. |
+| Sprint, tasks ready (reqs + tests strategy exist), none in-progress | Start `PRODUCE` on first planned TASK |
 | Sprint, tasks in-progress | Resume `PRODUCE` on current task |
 | Sprint, tasks done, not reviewed | Start `REVIEW` |
 | Sprint, review done, fixes pending | Start `FIX` |
 | Sprint, all delivered | LC03: `COMPOUND` > `INTEGRATE` |
 | Sprint, compound done | Next sprint → LC01 |
 | Sprint stale (> `lifecycle.stale_sprint_sessions` without progress) | Gate: resume / partial delivery / discard / discuss |
+
+### Lifecycle guardrails (Hard)
+
+These guardrails **block** progression and cannot be overridden silently:
+
+1. **No PRODUCE without REQS** — No TASK can move to `in-progress` unless at least one REQ- artefact is traced to it. If the agent attempts to start coding without requirements, it MUST stop and run REQS first. For beginners: "Before I start building, I need to write down exactly what the app should do — and have you confirm it."
+2. **No PRODUCE without test strategy** — The test approach (what to test, how, coverage targets) must be defined before coding starts. Tests are written FROM requirements, not FROM code. For beginners: "Before I build, I'll also describe how we'll verify each feature works correctly."
+3. **Supervised mode enforcement** — When `decision_involvement: supervised`, ANY technical choice during PRODUCE (library selection, data format, folder structure, persistence strategy, API design) MUST be presented as a Gate decision. The agent MUST NOT make these choices silently.
 
 ### Step 3 — Failure handling
 

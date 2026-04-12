@@ -170,8 +170,9 @@ Evaluate states **in order** — the first matching row wins.
 | Current state | Next action |
 |--------------|-------------|
 | No sprint + `it_expertise: beginner` + `current_sprint: 0` (first time) | **Intent-First mode**: elicit intent conversationally ("What would you like to build?"), reformulate in plain language, translate to goals. No technical output, no file names, no command names. Then transition to LC01 with plain-language phase names. |
-| No sprint + non-beginner + < 5 project files | Propose **Lightweight mode** (Gate): `PLAN` > `PRODUCE` > `DELIVER`, branch-only, Auto+Gate only, 3 health dimensions. User can upgrade to full mode anytime. |
-| No sprint + non-beginner | LC01: `COLLECT` > `ASSESS` > `PLAN` |
+| No sprint + < 3 project files | Propose **Micro mode** (Gate): `PRODUCE` > `DELIVER`, direct commit (no branches), 1 state file only (`.gse/status.yaml`), Gate-only (security/destructive), no REQS/TESTS guardrails. For beginners: "This is a very small project — I'll keep things simple." |
+| No sprint + 3-4 project files | Propose **Lightweight mode** (Gate): `PLAN` > `PRODUCE` > `DELIVER`, branch-only, Auto+Gate only, 3 health dimensions. User can upgrade to full mode anytime. |
+| No sprint + ≥ 5 project files | **Full mode** — LC01: `COLLECT` > `ASSESS` > `PLAN` |
 | Sprint, plan not approved | Resume `PLAN` |
 | Sprint, plan approved, **no requirements** (`reqs.md` absent or empty) | Start `REQS` — **test-driven requirements**: every REQ MUST include testable acceptance criteria (Given/When/Then or equivalent) and identify open technical questions. These criteria become the spec for validation tests. For beginners: "I'll write down exactly what the app should do, and for each feature, how we'll know it works. You'll confirm before I build anything." **Hard guardrail: PRODUCE MUST NOT start until REQS exist.** |
 | Sprint, reqs done, **no design** (optional — skip for small/simple tasks) | If tasks involve architecture decisions (new data model, API design, component structure): start `DESIGN`. Otherwise: proceed to PREVIEW or TESTS. |
@@ -203,8 +204,9 @@ If any activity fails: save checkpoint, report error, Gate: retry / skip / pause
 
 ## Modes
 
-- **Full mode** (default): LC01 > LC02 > LC03, worktree isolation, 8 health dimensions, full P7 tiers
-- **Lightweight mode** (< 5 files): PLAN > PRODUCE > DELIVER, branch-only, Auto+Gate only, 3 health dimensions, no complexity budget. User can upgrade anytime.
+- **Full mode** (default, ≥ 5 files): LC01 > LC02 > LC03, worktree isolation, 8 health dimensions, full P7 tiers
+- **Lightweight mode** (3-4 files): PLAN > PRODUCE > DELIVER, branch-only, Auto+Gate only, 3 health dimensions, no complexity budget. User can upgrade anytime.
+- **Micro mode** (< 3 files): PRODUCE > DELIVER, direct commit, 1 state file (`.gse/status.yaml`), Gate only (security/destructive), no health, no budget, no REQS/TESTS guardrails. For quick scripts and one-off tasks.
 - **Adopt mode** (existing project): non-destructive scan, sprint 0 baseline, optional annotation
 
 ## Methodology Feedback

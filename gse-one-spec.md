@@ -2131,23 +2131,26 @@ For micro-projects (single file, 1-hour task, quick script), the full lifecycle 
 
 ```yaml
 lifecycle:
-  mode: lightweight                    # full | lightweight
+  mode: micro | lightweight | full     # auto-detected, user can override
 ```
 
-**Auto-detection:** If `.gse/` does not exist and the project has < 5 files, the agent proposes lightweight mode automatically (Inform tier — user can override to full).
+**Auto-detection:** Based on project file count (using Step 1 exclusion rules):
+- < 3 project files → propose **Micro mode**
+- 3-4 project files → propose **Lightweight mode**
+- ≥ 5 project files → **Full mode** (default)
 
-| Aspect | Full mode | Lightweight mode |
-|--------|-----------|-----------------|
-| Lifecycle | LC01 → LC02 → LC03 | PLAN → PRODUCE → DELIVER |
-| Git strategy | worktree (sprint + feature branches) | branch-only (single feature branch, no sprint branch) |
-| Sprint artefacts | Full set (plan, reqs, design, tests, review, compound) | Plan only (inline, no separate file) |
-| Health dashboard | 8 dimensions | 3 of 8 (test_pass_rate, review_findings, git_hygiene — minimum for any project) |
-| Complexity budget | Tracked | Not tracked |
-| Decision tiers | Full P7 assessment | Simplified (Auto + Gate only, no Inform) |
+The user can always override the proposed mode (Gate decision). Upgrading from Micro → Lightweight → Full is possible at any time via `/gse:go` — the agent scaffolds the missing structure.
 
-The user can switch from lightweight to full mode at any time via `/gse:go` — the agent will scaffold the missing `.gse/` structure.
-
-**Minimum viable project size:** GSE-One is designed for projects that evolve over multiple sessions. For truly one-off tasks (a single script, a quick fix, a configuration change), using GSE-One adds more overhead than value. In such cases, work without GSE-One and consider adopting it later if the project grows.
+| Aspect | Full mode | Lightweight mode | Micro mode |
+|--------|-----------|-----------------|------------|
+| Lifecycle | LC01 → LC02 → LC03 | PLAN → PRODUCE → DELIVER | PRODUCE → DELIVER |
+| `.gse/` state | 4 files (config, profile, status, backlog) | 4 files | 1 file only (`status.yaml` with inline profile + task list) |
+| Git strategy | worktree (sprint + feature branches) | branch-only (single feature branch, no sprint branch) | direct commit (no branch creation) |
+| Sprint artefacts | Full set (plan, reqs, design, tests, review, compound) | Plan only (inline, no separate file) | None |
+| Health dashboard | 8 dimensions | 3 of 8 (test_pass_rate, review_findings, git_hygiene) | None |
+| Complexity budget | Tracked | Not tracked | Not tracked |
+| Decision tiers | Full P7 assessment | Simplified (Auto + Gate only, no Inform) | Gate only (security/destructive actions) |
+| REQS/TESTS guardrails | Hard (mandatory) | Hard (mandatory) | Not enforced (project too small for formal process) |
 
 ### 13.3 Team Usage
 

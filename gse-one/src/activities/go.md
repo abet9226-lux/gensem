@@ -84,8 +84,9 @@ Evaluate states **in order** — the first matching row wins.
 
 **"No sprint defined" sub-decision** (evaluated in order):
 1. If `it_expertise: beginner` and `current_sprint: 0` (first time) → start **Intent-First mode** (Step 7)
-2. If the project has < 5 actual project files (using Step 1 exclusion rules) → propose **Lightweight mode** (Step 6)
-3. Otherwise → start full **LC01**: `/gse:collect` > `/gse:assess` > `/gse:plan --strategic`
+2. If the project has < 3 actual project files → propose **Micro mode** (Gate): `PRODUCE` > `DELIVER`, direct commit, 1 state file, no REQS/TESTS guardrails
+3. If the project has 3-4 actual project files → propose **Lightweight mode** (Step 6)
+4. Otherwise (≥ 5 files) → start full **LC01**: `/gse:collect` > `/gse:assess` > `/gse:plan --strategic`
 
 **Lifecycle guardrails (Hard — cannot be skipped):**
 1. **No PRODUCE without REQS** — No TASK can move to `in-progress` unless at least one REQ- artefact with testable acceptance criteria is traced to it. REQS is test-driven: acceptance criteria ARE the future validation test specs. For beginners: "Before I start building, I need to write down exactly what the app should do and how we'll check it works — and have you confirm."
@@ -131,17 +132,18 @@ If the last activity ended with an error or incomplete state:
    "This is a small project. I recommend lightweight mode — reduced overhead while preserving traceability."
 2. Operational restrictions in lightweight mode (spec Section 13.2):
 
-| Aspect | Full Mode | Lightweight Mode |
-|--------|-----------|-----------------|
-| Lifecycle | LC01 > LC02 > LC03 | PLAN > PRODUCE > DELIVER |
-| Git strategy | `worktree` (sprint + feature branches) | `branch-only` (single feature branch from main, no sprint branch) |
-| Sprint artefacts | Full set (plan, reqs, design, tests, review, compound) | Plan only (inline in `.gse/status.yaml`, no separate file) |
-| Health dashboard | 8 dimensions | 3 only (test_pass_rate, review_findings, git_hygiene) |
-| Complexity budget | Tracked | Not tracked |
-| Decision tiers | Full P7 assessment (Auto + Inform + Gate) | Simplified (Auto + Gate only, no Inform) |
+| Aspect | Full Mode | Lightweight Mode | Micro Mode |
+|--------|-----------|-----------------|------------|
+| Lifecycle | LC01 > LC02 > LC03 | PLAN > PRODUCE > DELIVER | PRODUCE > DELIVER |
+| `.gse/` state | 4 files (config, profile, status, backlog) | 4 files | 1 file (`status.yaml` with inline profile + task list) |
+| Git strategy | `worktree` (sprint + feature branches) | `branch-only` (single feature branch from main) | direct commit (no branch creation) |
+| Sprint artefacts | Full set (plan, reqs, design, tests, review, compound) | Plan only (inline, no separate file) | None |
+| Health dashboard | 8 dimensions | 3 only (test_pass_rate, review_findings, git_hygiene) | None |
+| Complexity budget | Tracked | Not tracked | Not tracked |
+| Decision tiers | Full P7 assessment (Auto + Inform + Gate) | Simplified (Auto + Gate only) | Gate only (security/destructive) |
+| REQS/TESTS guardrails | Hard (mandatory) | Hard (mandatory) | Not enforced |
 
-3. User can upgrade to full mode anytime via `/gse:go` — the agent scaffolds the missing structure.
-4. **Minimum viable project size:** For truly one-off tasks (single script, quick fix), using GSE-One adds more overhead than value. Suggest working without GSE-One and adopting later if the project grows.
+3. User can upgrade from Micro → Lightweight → Full at any time via `/gse:go` — the agent scaffolds the missing structure.
 
 ### Step 7 — Intent-First Mode (Beginner + First Sprint)
 

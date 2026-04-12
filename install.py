@@ -763,8 +763,13 @@ def _ask_project_dir():
     raw = input("  Enter project path: ").strip()
     p = Path(raw).expanduser().resolve()
     if not p.is_dir():
-        err(f"Directory not found: {p}")
-        sys.exit(1)
+        warn(f"Directory not found: {bold(str(p))}")
+        if confirm(f"Create it?"):
+            p.mkdir(parents=True, exist_ok=True)
+            ok(f"Created {bold(str(p))}")
+        else:
+            err("Cannot proceed without a valid project directory.")
+            sys.exit(1)
     return p
 
 

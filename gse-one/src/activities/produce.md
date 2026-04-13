@@ -36,8 +36,10 @@ Before starting ANY task, verify these conditions. If any check fails, **STOP an
 
 1. **Requirements check** — Verify that `docs/sprints/sprint-{NN}/reqs.md` exists and contains at least one REQ- artefact traced to the TASK about to start. If missing: report "Requirements not defined for this task. I need to write down what the app should do first." Then run REQS. **Exception: `artefact_type: spike`** — skip this check (spikes are exploratory experiments).
 2. **Test strategy check** — Verify that a test strategy exists (`docs/sprints/sprint-{NN}/test-strategy.md` or a `tests` section in `plan.md`). If missing: report "Test strategy not defined. I need to describe how we'll verify each feature works." Then run TESTS `--strategy`. **Exception: `artefact_type: spike`** — skip this check.
+3. **Preview check (web/mobile only)** — If `config.yaml → project.domain` is `web` or `mobile` and no preview artefact exists (`docs/sprints/sprint-{NN}/preview.md` or equivalent), present a Gate: "A preview was not done for this project. For a visual project, it's recommended to validate the look before coding." Options: **Proceed without preview** / **Run preview first** / **Discuss**. For beginners: "Before I build, it's helpful to show you a sketch of what the app will look like — want me to do that first?" **Exception: `artefact_type: spike`** — skip this check.
+
 **Decision tier override:**
-3. **Supervised mode** — If `profile.decision_involvement` is `supervised`, ALL technical choices in this TASK are escalated to **Gate-tier** decisions. This includes: library/dependency selection, data format, folder structure, persistence strategy, API design, naming conventions. The agent MUST present options and wait for user confirmation — it MUST NOT make these choices silently.
+4. **Supervised mode** — If `profile.decision_involvement` is `supervised`, ALL technical choices in this TASK are escalated to **Gate-tier** decisions. This includes: library/dependency selection, data format, folder structure, persistence strategy, API design, naming conventions. The agent MUST present options and wait for user confirmation — it MUST NOT make these choices silently.
 
 ### Step 1 — Select Task
 
@@ -162,10 +164,50 @@ Produce the artefact according to the task specification:
      - **expert**: Propose with options: "No tests found. Options: generate unit tests / generate integration tests / skip / discuss"
    - If tests are generated, run them and capture evidence
 
-4. **Generate campaign report**:
-   - Summary: tests run, passed, failed, skipped
+4. **Display Test Campaign Summary in chat** (MANDATORY after every test run):
+
+   The test results MUST be displayed inline in the chat — not hidden in files. This makes the test-driven approach visible to the user at every step.
+
+   **For beginner users** — map test names to feature descriptions (from REQS acceptance criteria):
+   ```
+   ✅ Vérification automatique — tout est OK
+
+     Fonctionnalité                          Résultat
+     ──────────────────────────────────────────────────
+     Ajouter une dépense                     ✅ vérifié
+     Filtrer par mois                        ✅ vérifié
+     Filtrer par catégorie                   ✅ vérifié
+     Tri du plus récent au plus ancien       ✅ vérifié
+
+     4 vérifications réussies, 0 échecs
+   ```
+
+   When tests fail AND are fixed, show the correction:
+   ```
+   ✅ Vérification après correction — tout est OK maintenant
+
+     Fonctionnalité                          Résultat
+     ──────────────────────────────────────────────────
+     Ajouter une dépense                     ✅ vérifié
+     Filtrer par mois                        ✅ corrigé ← était en échec
+     Filtrer par catégorie                   ✅ vérifié
+
+     3 vérifications réussies, 0 échecs
+   ```
+
+   **For intermediate/expert users** — technical summary:
+   ```
+   Tests: 18 passed, 0 failed (0.75s)
+     filters.test.ts    6/6 ✓
+     budget.test.ts     5/5 ✓
+     summary.test.ts    4/4 ✓
+   Build: OK | Lint: OK
+   ```
+
+5. **Persist campaign report**:
+   - Save full output to `docs/sprints/sprint-{NN}/test-reports/`
+   - Attach summary to TASK in `backlog.yaml`: `test_campaign: { ... }`
    - Coverage delta if measurable
-   - Attach report to TASK in `backlog.yaml`: `test_campaign: { ... }`
 
 ### Step 5 — Finalize
 
@@ -179,8 +221,9 @@ Produce the artefact according to the task specification:
    - `last_activity_timestamp: {now}`
    - `last_task: TASK-{ID}`
 4. Update complexity budget: subtract task complexity from sprint remaining budget
-5. Report production summary:
-   - What was produced (files created/modified)
-   - Test results
-   - Remaining sprint budget
+5. **Beginner auto-execution** — For beginner users, do NOT list commands for the user to run (`npm install`, `npm run dev`, `npm test`, `pip install`, etc.). Instead, **execute them automatically** and report the result in plain language. Say "I'm starting the application for you" instead of "Run `npm run dev`". The beginner should never need to type a terminal command. If a command requires user interaction (e.g., opening a URL in a browser), give clear instructions: "Open this link in your browser: http://localhost:5173".
+6. Report production summary:
+   - What was produced (in beginner terms: feature descriptions, not file paths)
+   - Test Campaign Summary (from Step 4)
+   - Remaining sprint budget (for intermediate/expert; hidden for beginner)
    - Next task suggestion (if any)

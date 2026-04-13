@@ -186,3 +186,11 @@ traces:
 ```
 
 Present requirements for user approval (Gate). Set status to `approved` once confirmed.
+
+**Beginner presentation rule:** For beginner users, do NOT just give the file path and ask the user to open it. Instead, display a **summary of the requirements inline in the chat** including:
+- Each requirement title and its acceptance criteria (Given/When/Then) in plain language
+- Any open technical questions that need the user's decision
+- The file path for reference ("The full document is saved at `docs/sprints/sprint-{NN}/reqs.md` if you want to read the details")
+- A clear validation question: "Does this match what you want? Is anything wrong or missing?"
+
+This ensures the beginner can validate without navigating the file system.

@@ -1407,6 +1407,16 @@ gse:
 
 Campaign reports are saved in `docs/sprints/sprint-NN/test-reports/` and traced in the backlog.
 
+#### Test Campaign Summary (inline in chat)
+
+After **every** test execution during PRODUCE, the agent MUST display a summary inline in the chat — not just save it to a file. This makes the test-driven approach **visible** to the user at every step.
+
+**For beginner users:** Map test names to feature descriptions (derived from REQS acceptance criteria). Use ✅/❌ indicators. When tests fail and are fixed, show the correction explicitly ("✅ corrigé ← était en échec"). The user sees that every feature is verified and that problems are caught and fixed.
+
+**For intermediate/expert users:** Show a technical summary (file-level pass/fail counts, duration, build/lint status).
+
+**When tests fail during PRODUCE:** Display the failure summary, then after fixing, display the corrected summary showing which tests went from fail to pass. This makes the fix-verify cycle transparent.
+
 ### 6.4 Coverage Model
 
 The health dashboard tracks three coverage dimensions:

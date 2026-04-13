@@ -66,6 +66,39 @@ The strategy document defines:
 - Test naming conventions (TST-NNN)
 - Test data management approach
 - CI/CD integration plan
+- **Validation test derivation** (see below)
+
+#### Validation test derivation (from REQS acceptance criteria)
+
+**This is the concrete link between test-driven requirements and test execution.**
+
+For each acceptance criterion (Given/When/Then) in `reqs.md`, create a corresponding TST- artefact:
+
+1. **One TST per scenario** — Each Given/When/Then scenario in a REQ becomes at least one test
+2. **Naming** — Reference the REQ: e.g., `TST-001` validates `REQ-001` scenario 1
+3. **Exact conditions** — The test MUST check the exact conditions stated in the criterion, not a different interpretation
+4. **Traceability** — Each TST carries `traces: { validates: [REQ-NNN] }`
+5. **Distinction from verification tests** — Validation tests (from REQS) verify the app does what the user asked. Verification tests (from DESIGN) verify the code is built correctly. Both appear in the test campaign summary but are clearly labeled.
+
+Example derivation:
+```
+REQ-003 — Filter expenses by month
+  Scenario 1: Given 5 expenses across 3 months,
+              When filtering by "March 2026",
+              Then only the 2 March expenses appear
+  
+  → TST-007: filterByMonth returns only March expenses
+    traces: { validates: [REQ-003] }
+
+  Scenario 2: Given no expenses in April,
+              When filtering by "April 2026", 
+              Then an empty list is shown
+  
+  → TST-008: filterByMonth returns empty for month with no data
+    traces: { validates: [REQ-003] }
+```
+
+For beginners: "For each feature you confirmed in the requirements, I'll create a test that checks it works exactly as described."
 
 Save to `docs/sprints/sprint-{NN}/test-strategy.md`.
 

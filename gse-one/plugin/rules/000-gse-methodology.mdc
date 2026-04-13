@@ -82,7 +82,16 @@ When `profile.it_expertise` is `beginner`, apply these rules to ALL chat output 
 | `worktree` | "a separate workspace" |
 | `merge` | "combine changes" |
 
+| `test passed` | "✅ vérifié" (or equivalent in user's language) |
+| `test failed` | "❌ échec" |
+| `test fixed` | "✅ corrigé" |
+| `test campaign` | "vérification automatique" |
+| `npm test` / `pytest` / etc. | Do not show the command — show the results summary |
+| `*.test.ts` / `test_*.py` | Do not mention file names — map to feature descriptions |
+
 **The internal artefacts still use technical names** — only the chat output is filtered. The user never needs to type a `/gse:` command as a beginner — the agent proposes actions in plain language and executes them after confirmation.
+
+**Test Campaign Summary rule:** After EVERY test execution during PRODUCE, the agent MUST display a summary inline in the chat. For beginners: map test names to feature descriptions from REQS. For experts: show file-level technical summary. This makes the test-driven approach visible — tests are not hidden in files.
 
 ## State Management
 

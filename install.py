@@ -209,6 +209,52 @@ def ensure_dir(path):
 
 
 # ---------------------------------------------------------------------------
+# Duplicate installation detection
+# ---------------------------------------------------------------------------
+
+def _check_duplicate_install(platform_name, mode, project_dir=None, env=None):
+    """Warn if another installation mode already exists for this platform.
+
+    Returns True if the user wants to proceed despite the warning, False to abort.
+    """
+    conflicts = []
+
+    if platform_name == "claude":
+        if mode == "plugin":
+            # Check for no-plugin install in current project
+            local = Path(project_dir or Path.cwd()) / ".claude" / "skills"
+            if local.is_dir() and any(local.iterdir()):
+                conflicts.append(("no-plugin (project)", str(local)))
+        elif mode == "no-plugin" and project_dir:
+            # Check for plugin install — we can't easily detect Claude plugin installs
+            # without running `claude plugin list`, so skip for Claude
+            pass
+
+    elif platform_name == "cursor":
+        if mode == "plugin" and env:
+            # Check for no-plugin install in current project
+            local = Path.cwd() / ".cursor" / "skills"
+            if local.is_dir() and any(local.iterdir()):
+                conflicts.append(("no-plugin (project)", str(local)))
+        elif mode == "no-plugin" and env:
+            # Check for global plugin install
+            global_plugin = env["cursor_dir"] / "plugins" / "local" / "gse-one"
+            if global_plugin.is_dir():
+                conflicts.append(("plugin (global)", str(global_plugin)))
+
+    if conflicts:
+        warn(f"Existing GSE-One installation(s) detected for {bold(platform_name)}:")
+        for conflict_mode, conflict_path in conflicts:
+            warn(f"  → {conflict_mode}: {dim(conflict_path)}")
+        warn("Having both will cause duplicate commands (skills appear twice).")
+        warn(f"Uninstall the other first: python3 install.py --uninstall --platform {platform_name} --mode {conflicts[0][0].split(' ')[0]}")
+        if not confirm("Proceed anyway?"):
+            err("Installation cancelled to avoid duplicates.")
+            return False
+    return True
+
+
+# ---------------------------------------------------------------------------
 # Post-install verification
 # ---------------------------------------------------------------------------
 
@@ -336,6 +382,10 @@ def install_claude_plugin(scope):
     """Install GSE-One as a Claude Code plugin using the CLI."""
     step(f"Claude Code — Plugin install (scope: {scope})")
 
+    if not _check_duplicate_install("claude", "plugin"):
+        tracker.add("Claude Code", "plugin", scope, "-", "FAIL", "cancelled (duplicate)")
+        return False
+
     if not command_exists("claude"):
         err("Claude Code CLI not found on PATH.")
         err("Install it from https://claude.ai/download and try again.")
@@ -407,6 +457,10 @@ def uninstall_claude_plugin():
 def install_claude_no_plugin(project_dir):
     """Install GSE-One artifacts directly into .claude/ of a project."""
     step("Claude Code — Non-plugin install")
+
+    if not _check_duplicate_install("claude", "no-plugin", project_dir=project_dir):
+        tracker.add("Claude Code", "no-plugin", "project", str(project_dir), "FAIL", "cancelled (duplicate)")
+        return False
 
     claude_dir = Path(project_dir) / ".claude"
     ensure_dir(claude_dir)
@@ -498,6 +552,10 @@ def install_cursor_plugin(env):
     """Install GSE-One as a Cursor plugin by copying to ~/.cursor/plugins/."""
     step("Cursor — Plugin install")
 
+    if not _check_duplicate_install("cursor", "plugin", env=env):
+        tracker.add("Cursor", "plugin", "global", "-", "FAIL", "cancelled (duplicate)")
+        return False
+
     plugins_dir = env["cursor_dir"] / "plugins" / "local"
     ensure_dir(plugins_dir)
 
@@ -543,6 +601,10 @@ def uninstall_cursor_plugin(env):
 def install_cursor_no_plugin(project_dir):
     """Install GSE-One artifacts directly into .cursor/ of a project."""
     step("Cursor — Non-plugin install")
+
+    if not _check_duplicate_install("cursor", "no-plugin", project_dir=project_dir, env=detect_environment()):
+        tracker.add("Cursor", "no-plugin", "project", str(project_dir), "FAIL", "cancelled (duplicate)")
+        return False
 
     cursor_dir = Path(project_dir) / ".cursor"
     ensure_dir(cursor_dir)

@@ -227,3 +227,4 @@ Produce the artefact according to the task specification:
    - Test Campaign Summary (from Step 4)
    - Remaining sprint budget (for intermediate/expert; hidden for beginner)
    - Next task suggestion (if any)
+7. **Regenerate dashboard** — Run `python3 .gse/dashboard.py` to update `docs/dashboard.html` with new task status, test results, and budget consumption.

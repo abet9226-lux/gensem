@@ -198,3 +198,4 @@ Remove backup tags older than `backup_retention_days` (default: 30):
    - Version tagged (if applicable)
    - Branches cleaned
    - Next step: propose `/gse:compound`
+3. **Regenerate dashboard** — Run `python3 .gse/dashboard.py` to update `docs/dashboard.html` with delivery status and release info.

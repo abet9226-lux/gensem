@@ -67,7 +67,13 @@ If `config.yaml → dependency_audit: true` (default for projects with package m
 1. **Detect package manager** — Look for `package-lock.json` / `yarn.lock` (npm audit), `requirements.txt` / `pyproject.toml` (pip-audit), `Cargo.lock` (cargo audit), `go.sum` (govulncheck).
 2. **Run audit** — Execute the appropriate audit command.
 3. **If critical vulnerabilities found** — Soft guardrail: report the vulnerability and suggest updating. For beginners: "I found a security issue in one of the tools this project uses. I recommend updating it before we continue."
-4. **If no vulnerabilities or low-severity only** — Proceed silently to Step 3.
+4. **If no vulnerabilities or low-severity only** — Proceed to Step 2.6.
+
+### Step 2.6 — Dashboard Refresh
+
+1. **If `.gse/dashboard.py` does not exist** — Copy it from the plugin source (rattrapage for projects initialized before dashboard was added).
+2. **Regenerate `docs/dashboard.html`** — Run `python3 .gse/dashboard.py` to update the dashboard with current state.
+3. This runs silently — no message to the user unless it's the first generation (in which case, inform per HUG Step 5.5 rules).
 
 ### Step 3 — Determine Next Action (Decision Tree)
 

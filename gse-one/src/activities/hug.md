@@ -223,9 +223,19 @@ created: 2026-01-15
 updated: 2026-01-15
 ```
 
+### Step 5.5 — Dashboard Initialization
+
+After `.gse/` is created and profile saved:
+
+1. Copy `gse_dashboard.py` to `.gse/dashboard.py` (from the plugin's source)
+2. Generate the first `docs/dashboard.html` by running: `python3 .gse/dashboard.py`
+3. Inform the user:
+   - **For beginner users:** "J'ai créé un tableau de bord pour suivre l'avancement de ton projet. Tu peux l'ouvrir dans ton navigateur à tout moment : `docs/dashboard.html`. Il se met à jour à chaque étape."
+   - **For intermediate/advanced users:** "Dashboard generated at `docs/dashboard.html`. Regenerated after each activity. Run `python3 .gse/dashboard.py --watch` for live updates."
+
 ### Step 6 — Transition
 
-**Only after Steps 4-5 are fully completed** (git initialization resolved, profile saved):
+**Only after Steps 4-5.5 are fully completed** (git initialization resolved, profile saved, dashboard created):
 - If project has no `.gse/config.yaml`: propose `/gse:go` to start project setup.
   - **For beginner users:** Explain what `/gse:go` does before suggesting it: "Now that your profile is saved, the next step is to set up your project. Type `/gse:go` — it will help you define what you want to build and create a first work plan."
   - **For intermediate/advanced users:** "Profile saved. Run `/gse:go` to set up project state (config.yaml, first sprint)."

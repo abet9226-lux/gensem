@@ -81,6 +81,8 @@ When `profile.it_expertise` is `beginner`, apply these rules to ALL chat output 
 | `complexity budget` | "the amount of new things we can add" |
 | `worktree` | "a separate workspace" |
 | `merge` | "combine changes" |
+| `dashboard.html` | "the project progress page" |
+| `python3 .gse/dashboard.py` | Do not show — regenerate silently or say "I've updated the project progress page" |
 
 | `test passed` | "✅ vérifié" (or equivalent in user's language) |
 | `test failed` | "❌ échec" |

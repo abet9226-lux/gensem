@@ -35,22 +35,60 @@ GSE-One is an AI engineering companion that brings structured software developme
 
 ## Quick Start
 
-```bash
-# Clone the repository
-git clone https://github.com/gse-one/gse-one.git
-cd gse-one
+### Option A — Cursor
 
-# Install (interactive — guides you through platform and mode selection)
+```bash
+# Set up the workspace
+mkdir gse-quick-start && cd gse-quick-start
+git clone https://github.com/nicolasguelfi/gensem.git
+
+# Install GSE-One (local mode — everything stays in the project)
+cd gensem
+python3 install.py --platform cursor --mode no-plugin --project-dir ../my-project
+
+# Create and launch your project
+cd ../my-project && git init
+cursor .
+```
+
+In Cursor, type: `/go`
+
+### Option B — Claude Code
+
+```bash
+# Set up the workspace
+mkdir gse-quick-start && cd gse-quick-start
+git clone https://github.com/nicolasguelfi/gensem.git
+
+# Install GSE-One (local mode — everything stays in the project)
+cd gensem
+python3 install.py --platform claude --mode no-plugin --project-dir ../my-project
+
+# Create and launch your project
+cd ../my-project && git init
+claude
+```
+
+In Claude Code, type: `/go`
+
+> **Note:** The `no-plugin` mode copies all GSE-One artifacts into your project's `.cursor/` or `.claude/` directory — nothing is installed globally. The only file created outside the project is `~/.gse-one` (1 line containing the plugin path, removed by `python3 install.py --uninstall`).
+>
+> In `no-plugin` mode, commands are unprefixed: `/go`, `/plan`, `/reqs`... instead of `/gse:go`, `/gse:plan`, `/gse:reqs`.
+
+### Plugin mode (alternative)
+
+To install via the platform's plugin system (prefixed commands `/gse:*`):
+
+```bash
+# Cursor (local plugin)
+python3 install.py --platform cursor --mode plugin
+
+# Claude Code (user-scoped plugin)
+python3 install.py --platform claude --mode plugin --scope user
+
+# Interactive (the installer guides you)
 python3 install.py
 ```
-
-Then, in your coding agent:
-
-```
-/gse:go
-```
-
-The GSE-One agent responds, detects the project state, and proposes the next activity.
 
 ---
 

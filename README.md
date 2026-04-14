@@ -40,13 +40,14 @@ GSE-One is an AI engineering companion that brings structured software developme
 ```bash
 # Set up the workspace
 mkdir gse-quick-start && cd gse-quick-start
+mkdir my-project
 git clone https://github.com/nicolasguelfi/gensem.git
 
 # Install GSE-One (local mode — everything stays in the project)
 cd gensem
 python3 install.py --platform cursor --mode no-plugin --project-dir ../my-project
 
-# Create and launch your project
+# Initialize and launch your project
 cd ../my-project && git init
 cursor .
 ```
@@ -58,13 +59,14 @@ In Cursor, type: `/go`
 ```bash
 # Set up the workspace
 mkdir gse-quick-start && cd gse-quick-start
+mkdir my-project
 git clone https://github.com/nicolasguelfi/gensem.git
 
 # Install GSE-One (local mode — everything stays in the project)
 cd gensem
 python3 install.py --platform claude --mode no-plugin --project-dir ../my-project
 
-# Create and launch your project
+# Initialize and launch your project
 cd ../my-project && git init
 claude
 ```

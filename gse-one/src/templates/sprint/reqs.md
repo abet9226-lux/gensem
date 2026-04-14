@@ -3,6 +3,7 @@ gse:
   type: requirement
   sprint: 1                            # numeric sprint number
   branch: gse/sprint-01/integration     # sprint branch
+  elicitation_summary: ""              # Step 0 output: user's needs in their own words + agent reformulation
   traces:
     implements: []                     # e.g., [TASK-001] — requirements this doc implements
   status: draft                        # draft | reviewed | approved
@@ -68,6 +69,20 @@ gse:
 | NFR01  |        |       | draft    |
 | NFR02  |        |       | draft    |
 | NFR03  |        |       | draft    |
+
+## Quality Coverage Matrix
+
+_Results of the ISO 25010-inspired quality assurance checklist (Step 7 of `/gse:reqs`)._
+
+| Quality Dimension | Covered? | Requirements | Gaps / Deferred |
+|-------------------|----------|--------------|-----------------|
+| Performance       |          |              |                 |
+| Security          |          |              |                 |
+| Reliability       |          |              |                 |
+| Usability         |          |              |                 |
+| Maintainability   |          |              |                 |
+| Accessibility     |          |              |                 |
+| Compatibility     |          |              |                 |
 
 ## Open Questions
 

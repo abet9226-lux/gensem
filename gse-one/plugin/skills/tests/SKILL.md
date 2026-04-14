@@ -26,7 +26,7 @@ Before executing, read:
 1. `.gse/status.yaml` — current sprint number
 2. `.gse/config.yaml` — project configuration (language, framework, domain)
 3. `.gse/profile.yaml` — user preferences
-4. `docs/sprints/sprint-{NN}/reqs.md` — requirements to test against
+4. `docs/sprints/sprint-{NN}/reqs.md` — requirements to test against (including quality coverage matrix and checklist results from Step 7)
 5. `docs/sprints/sprint-{NN}/design.md` — design to test against
 6. `docs/sprints/sprint-{NN}/test-reports/` — existing test reports (if any)
 7. `.gse/status.yaml` — project health metrics (health section)
@@ -99,6 +99,24 @@ REQ-003 — Filter expenses by month
 ```
 
 For beginners: "For each feature you confirmed in the requirements, I'll create a test that checks it works exactly as described."
+
+#### Quality-driven tests (from REQS quality checklist)
+
+When the requirements phase identifies quality gaps via the ISO 25010-inspired checklist (Step 7 of `/gse:reqs`), the test strategy must include corresponding tests to close those gaps. Read the quality coverage matrix in `reqs.md` and for each gap that was **not deferred or acknowledged**:
+
+1. **Create a TST- artefact** targeting the gap — e.g., a load test for an unspecified performance threshold, a security test for missing rate limiting
+2. **Link via `quality_gap` trace** — Each gap-closing test carries `traces: { validates: [REQ-NNN], quality_gap: true }` to distinguish it from standard validation tests
+3. **Assign to the appropriate pyramid level** — These are not a new pyramid level; they are constraints on existing levels (unit for performance conditions, integration for security contracts, E2E for accessibility)
+
+Example:
+```
+Quality gap: REQ-005 "API response time" — stress test conditions not specified
+  → TST-050: Load test with 500 concurrent users for 5 minutes
+    traces: { validates: [REQ-005], quality_gap: true }
+    level: performance
+```
+
+For beginners: "The quality checklist found some details we should verify with tests. I'll add those tests to the plan."
 
 Save to `docs/sprints/sprint-{NN}/test-strategy.md`.
 

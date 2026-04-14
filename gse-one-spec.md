@@ -1015,7 +1015,7 @@ The agent also creates backlog items **automatically** during other activities (
 
 | Command | Activity | Description |
 |---------|----------|-------------|
-| `/gse:reqs` | **Requirements** | Define product functions and qualities (FR & NFR) including user stories for validation testing |
+| `/gse:reqs` | **Requirements** | Define product functions and qualities (FR & NFR). Begins with conversational elicitation (Step 0) to capture user intent in natural language before formalization. Includes user stories with testable acceptance criteria for validation testing. Ends with a quality assurance checklist (ISO 25010 inspired) verifying NFR completeness and measurability |
 | `/gse:design` | **Design** | Define architecture decisions, component decomposition, interface contracts, and technical choices. Produces design artefacts traced to requirements. All significant choices are logged to the decision journal |
 | `/gse:preview` | **Preview** | Simulate and show what the planned artefacts will look like before building them — wireframes, API contracts, component diagrams, user story walkthroughs (see Section 5) |
 | `/gse:tests` | **Tests** | Define test strategy, write tests, set up test environment, execute test campaigns, and produce test evidence. Covers verification (unit, integration) and validation (acceptance, E2E, visual). Adapts the test pyramid to the project domain. Installs required tools (test frameworks, browsers, coverage tools). Produces test campaign reports with screenshots and optional video. See Section 6 |
@@ -1242,6 +1242,16 @@ The `/gse:tests` activity manages the full testing lifecycle: strategy definitio
 | **Regression** | Ensure that previously fixed bugs don't reappear | RVW (past review findings) |
 
 **Cross-sprint regression detection:** During `/gse:review`, the agent executes the **full test suite** (not just tests for the current TASK) and compares pass/fail counts with the previous sprint's test report (`docs/sprints/sprint-{NN-1}/test-reports/`). Tests that passed in the previous sprint but now fail are flagged as `[REGRESSION]` findings with severity HIGH. This provides automatic cross-sprint regression detection without additional infrastructure — it leverages the accumulated test suite.
+
+#### Requirements elicitation and quality assurance
+
+The `/gse:reqs` activity includes two mechanisms that feed into the test strategy:
+
+**Conversational elicitation (Step 0):** Before formalizing requirements, the agent engages the user in a free-form conversation to capture intent in natural language. The user describes what the system should do and how it should behave (speed, reliability, ease of use). The agent identifies both functional needs and implicit quality expectations, reformulates them as themes, and validates with the user. This ensures quality requirements are surfaced early — not as an afterthought during NFR definition.
+
+**Quality assurance checklist (Step 7, ISO 25010 inspired):** After drafting requirements, the agent verifies NFR completeness against 7 quality dimensions: Performance, Security, Reliability, Usability, Maintainability, Accessibility, Compatibility. For each NFR, 2-3 checklist items are verified (target metric defined? measurement method specified? conditions defined?). Gaps are classified by priority: HIGH (security, reliability, performance) trigger Soft guardrails; MEDIUM and LOW are informational. The output is a **quality coverage matrix** persisted in `reqs.md`.
+
+**Impact on test strategy:** When quality gaps are identified, the test strategy must include corresponding tests to close them. Each gap-closing test carries a `quality_gap: true` trace field to distinguish it from standard validation tests. These are not a new pyramid level — they are constraints on existing levels informed by the quality checklist.
 
 #### Test pyramid (calibrated by project domain)
 
@@ -2499,7 +2509,7 @@ Evaluate states **in order** — the first matching row wins.
 | No sprint + non-beginner + < 5 project files | Propose **Lightweight mode** (Gate): `PLAN` > `PRODUCE` > `DELIVER`, branch-only, Auto+Gate only, 3 health dimensions. User can upgrade anytime. |
 | No sprint + non-beginner | Start LC01 (`COLLECT` > `ASSESS` > `PLAN`) |
 | Sprint exists, plan not approved | Resume `PLAN` |
-| Sprint, plan approved, **no requirements** (`reqs.md` absent or empty) | Start `REQS` — **test-driven requirements**: every REQ MUST include testable acceptance criteria (Given/When/Then) and identify open technical questions. **Hard guardrail: PRODUCE MUST NOT start until REQS exist.** |
+| Sprint, plan approved, **no requirements** (`reqs.md` absent or empty) | Start `REQS` — begins with **conversational elicitation** (Step 0) to capture user intent in natural language, then **test-driven requirements** with testable acceptance criteria (Given/When/Then) and open technical questions, then **quality assurance checklist** (Step 7, ISO 25010 inspired) verifying NFR completeness. **Hard guardrail: PRODUCE MUST NOT start until REQS exist.** |
 | Sprint, reqs done, **no design** (optional) | If tasks involve architecture decisions (new data model, API design, component structure): start `DESIGN`. Otherwise: proceed to PREVIEW or TESTS. |
 | Sprint, design done (or skipped), **no preview** and `project_domain` is `web` or `mobile` | Start `PREVIEW` — show mockup/prototype for user validation before coding. For CLI/API/data/embedded: skip silently. |
 | Sprint, design + preview done (or skipped), **no test strategy** (no `test-strategy.md`) | Start `TESTS --strategy` — define test pyramid: verification tests (from DESIGN) + validation tests (from REQS acceptance criteria). |
@@ -2513,7 +2523,7 @@ Evaluate states **in order** — the first matching row wins.
 | Sprint stale (> `lifecycle.stale_sprint_sessions` sessions without progress) | Stale detection (Step 3) |
 
 **Lifecycle guardrails (Hard — cannot be skipped):**
-1. **No PRODUCE without REQS** — No TASK can move to `in-progress` unless at least one REQ- artefact with testable acceptance criteria is traced to it. REQS is test-driven: acceptance criteria ARE the future validation test specs.
+1. **No PRODUCE without REQS** — No TASK can move to `in-progress` unless at least one REQ- artefact with testable acceptance criteria is traced to it, AND the quality assurance checklist (Step 7) has been run with high-priority gaps addressed or explicitly acknowledged. REQS is test-driven: acceptance criteria ARE the future validation test specs.
 2. **No PRODUCE without test strategy** — The test approach (verification from DESIGN + validation from REQS acceptance criteria) must be defined before coding starts. Test strategy comes AFTER DESIGN and PREVIEW.
 
 **Decision tier override:**

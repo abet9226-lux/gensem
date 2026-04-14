@@ -70,7 +70,11 @@ When `profile.it_expertise` is `beginner`, apply these rules to ALL chat output 
 | `/gse:collect` | "I'll look at what we have" |
 | `/gse:assess` | "I'll figure out what's missing" |
 | `/gse:plan` | "I'll organize the work" |
-| `/gse:reqs` | "I'll write down what the app should do and ask you to confirm" |
+| `/gse:reqs` | "I'll first understand what you need, then write down what the app should do and ask you to confirm" |
+| `elicitation` | "I'll first understand what you really need — just talk naturally" |
+| `quality checklist` | "I'll make sure each quality requirement is fully detailed" |
+| `quality gap` | "an important detail we haven't spelled out yet" |
+| `quality coverage matrix` | "the quality verification summary" |
 | `/gse:design` | "I'll decide how to structure the app" |
 | `/gse:tests --strategy` | "I'll describe how we'll verify each feature works" |
 | `/gse:produce` | "I'll build it" |
@@ -206,7 +210,7 @@ Evaluate states **in order** — the first matching row wins.
 | No sprint + 3-4 project files | Propose **Lightweight mode** (Gate): `PLAN` > `PRODUCE` > `DELIVER`, branch-only, Auto+Gate only, 3 health dimensions. User can upgrade to full mode anytime. |
 | No sprint + ≥ 5 project files | **Full mode** — LC01: `COLLECT` > `ASSESS` > `PLAN` |
 | Sprint, plan not approved | Resume `PLAN` |
-| Sprint, plan approved, **no requirements** (`reqs.md` absent or empty) | Start `REQS` — **test-driven requirements**: every REQ MUST include testable acceptance criteria (Given/When/Then or equivalent) and identify open technical questions. These criteria become the spec for validation tests. For beginners: "I'll write down exactly what the app should do, and for each feature, how we'll know it works. You'll confirm before I build anything." **Hard guardrail: PRODUCE MUST NOT start until REQS exist.** |
+| Sprint, plan approved, **no requirements** (`reqs.md` absent or empty) | Start `REQS` — begins with **conversational elicitation** (Step 0) to capture user intent in natural language, then **test-driven requirements** with testable acceptance criteria (Given/When/Then), then **quality checklist** (ISO 25010 inspired) verifying NFR completeness. For beginners: "I'll first understand what you need, then write down what the app should do, and for each feature, how we'll know it works. You'll confirm before I build anything." **Hard guardrail: PRODUCE MUST NOT start until REQS exist.** |
 | Sprint, reqs done, **no design** (optional — skip for small/simple tasks) | If tasks involve architecture decisions (new data model, API design, component structure): start `DESIGN`. Otherwise: proceed to PREVIEW or TESTS. |
 | Sprint, design done (or skipped), **no preview** and `project_domain` is `web` or `mobile` | Start `PREVIEW` — show mockup/prototype for user validation before coding. For beginners: "Before I build, let me show you what it will look like — tell me if it matches what you want." For CLI/API/data/embedded: skip silently. |
 | Sprint, design + preview done (or skipped), **no test strategy** (no `test-strategy.md`) | Start `TESTS --strategy` — define test pyramid, verification tests (from DESIGN) + validation tests (from REQS acceptance criteria). For beginners: "Now I'll describe how we'll check that each feature works correctly." |
@@ -223,7 +227,7 @@ Evaluate states **in order** — the first matching row wins.
 
 These guardrails **block** progression and cannot be overridden silently:
 
-1. **No PRODUCE without REQS** — No TASK can move to `in-progress` unless at least one REQ- artefact with testable acceptance criteria is traced to it. REQS is test-driven: acceptance criteria ARE the future validation test specifications. For beginners: "Before I start building, I need to write down exactly what the app should do and how we'll check it works — and have you confirm." **Exception: `artefact_type: spike`** — spikes bypass REQS and TESTS guardrails (they are complexity-boxed experiments, max 3 points, non-deliverable, must produce a DEC-).
+1. **No PRODUCE without REQS** — No TASK can move to `in-progress` unless at least one REQ- artefact with testable acceptance criteria is traced to it, AND the quality assurance checklist (Step 7) has been run (high-priority gaps addressed or explicitly acknowledged). REQS is test-driven: acceptance criteria ARE the future validation test specifications. For beginners: "Before I start building, I need to understand what you need, write down exactly what the app should do, verify the quality requirements are complete, and have you confirm." **Exception: `artefact_type: spike`** — spikes bypass REQS and TESTS guardrails (they are complexity-boxed experiments, max 3 points, non-deliverable, must produce a DEC-).
 2. **No PRODUCE without test strategy** — The test approach (pyramid, verification from DESIGN + validation from REQS acceptance criteria, coverage targets) must be defined before coding starts. Test strategy comes AFTER DESIGN and PREVIEW, because the architecture informs what to test and how. For beginners: "Before I build, I'll describe how we'll verify each feature works correctly."
 
 ### Decision tier override

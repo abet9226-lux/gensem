@@ -11,6 +11,7 @@ Arguments: $ARGUMENTS
 | Flag / Sub-command | Description |
 |--------------------|-------------|
 | (no args)          | Start requirements elicitation for the current sprint |
+| `--elicit`         | Run only the conversational elicitation phase (Step 0) |
 | `--fr`             | Focus on functional requirements |
 | `--nfr`            | Focus on non-functional requirements |
 | `--show`           | Display current requirements without modification |
@@ -28,6 +29,37 @@ Before executing, read:
 6. `.gse/sources.yaml` — external sources that may inform requirements
 
 ## Workflow
+
+### Step 0 — Conversational Elicitation
+
+Before formalizing requirements, engage the user in a free-form conversation about their needs. This phase captures intent in natural language before imposing structure, and surfaces both functional needs and implicit quality expectations.
+
+**Purpose:**
+- Let the user articulate goals without technical constraints or format requirements
+- Uncover implicit or overlooked requirements (especially quality expectations: speed, reliability, ease of use)
+- Build shared understanding between agent and user on scope and priorities
+
+**Process:**
+
+1. **Open-ended question** — Ask: "Describe what this should do and what matters most to you. Don't worry about technical details — just describe the problem and what success looks like. Think also about how it should behave: speed, reliability, ease of use..."
+2. **Active listening** — Ask clarifying questions as needed:
+   - "Who will use this?" (actors)
+   - "What's the main frustration it solves?" (rationale)
+   - "Are there things it must never do?" (constraints)
+   - "How fast should it be? Does it handle sensitive data?" (quality expectations)
+3. **Synthesis** — Reformulate the user's input into 3-5 key themes, separating functional goals from quality expectations:
+   - Functional themes: "Filter expenses by month", "Export to CSV"
+   - Quality themes: "Must be fast even with large datasets", "Data must be secure"
+4. **Validation** — Present the synthesis: "The main goals are: [theme 1], [theme 2], [theme 3]. Quality expectations: [quality 1], [quality 2]. Is that right? Anything missing?"
+5. **Persist** — Save the user's original words and the agent's reformulation in the `elicitation_summary` field of the `reqs.md` frontmatter.
+
+**Adaptation by expertise level:**
+
+- **Beginner:** "Before I write down what the app should do, help me understand what you really need. Just talk naturally — I'll organize it later. Think about what the app does, but also how it should feel: fast? reliable? easy to use?"
+- **Intermediate:** "Let's start with a quick conversation about your needs before I formalize requirements. This helps me capture priorities and quality expectations I might otherwise miss."
+- **Expert:** Skip this phase if the user provides a detailed specification upfront or says "I have clear requirements." But offer: "Would a quick elicitation conversation help me understand your priorities better?" (Inform tier). If skipped, record `elicitation_summary: "Skipped — user provided detailed spec"`.
+
+**If `--elicit` flag is used:** Run only this step, then stop. The user can continue later with `/gse:reqs` to proceed to formalization.
 
 ### Step 1 — Scope Determination
 
@@ -187,7 +219,67 @@ Standard dimensions (adapt to project type and domain):
 
 Present the analysis as a helpful summary — not a blocker. For beginners, use plain language: "I noticed you haven't mentioned how the app should look. Without guidance, I'll use a very basic design. Would you like to describe the visual style you'd prefer?" For experts, a concise gap list is sufficient. The user may choose to add requirements, explicitly defer them, or acknowledge the gap as acceptable.
 
-### Step 7 — Persist
+### Step 7 — Quality Assurance Checklist (ISO 25010 Inspired)
+
+After the coverage analysis, verify that non-functional requirements are **complete and measurable** using a quality checklist inspired by ISO 25010. This checklist is a **Soft guardrail** (inform + suggest), not a blocker.
+
+#### 7a — Quality Dimensions Checklist
+
+For each NFR written in Step 3, verify completeness against these quality dimensions:
+
+| Quality Dimension | Checklist Items |
+|-------------------|----------------|
+| **Performance** | ☐ Target metric defined (e.g., "< 200ms at p95") · ☐ Measurement method specified (e.g., "k6 load test") · ☐ Load/stress conditions defined (e.g., "500 concurrent users") |
+| **Security** | ☐ Threat model or attack surface identified · ☐ Authentication/authorization mechanism specified · ☐ Compliance requirements stated (e.g., "OWASP Top 10") |
+| **Reliability** | ☐ Availability target defined (e.g., "99.5% uptime") · ☐ Failure mode handling described · ☐ Recovery procedure specified |
+| **Usability** | ☐ Error message clarity requirement · ☐ Input validation feedback specified · ☐ Learning curve or onboarding requirement |
+| **Maintainability** | ☐ Test coverage target defined · ☐ Documentation requirements stated · ☐ Modularity or coupling constraints |
+| **Accessibility** | ☐ WCAG target level specified (e.g., "AA") · ☐ Keyboard navigation required · ☐ Screen reader support specified |
+| **Compatibility** | ☐ Target platforms/browsers listed · ☐ Minimum versions specified · ☐ Responsive breakpoints defined |
+
+**Scoring:** For each NFR, count checked items. Target: at least 2 out of 3 items checked per applicable dimension.
+
+#### 7b — Gap Classification and Action
+
+Classify gaps by priority and act accordingly:
+
+| Priority | Dimensions | Action |
+|----------|-----------|--------|
+| **HIGH** | Security, Reliability, Performance | **Soft guardrail:** Agent explicitly suggests adding the missing detail. Present consequences of the gap. |
+| **MEDIUM** | Usability, Maintainability, Accessibility | **Soft guardrail:** Agent suggests, user decides. |
+| **LOW** | Compatibility details | **Inform only:** Mention the gap, no pressure. |
+
+For each gap found, the user may: (1) add the missing detail to the NFR, (2) explicitly defer to a future sprint, or (3) acknowledge the gap as acceptable. Record the decision.
+
+#### 7c — Quality Coverage Matrix
+
+Generate a summary matrix and persist it in the requirements document:
+
+```
+Quality Assurance Summary — Sprint S{NN}
+─────────────────────────────────────────
+
+Performance:
+  ✓ REQ-005 "API response < 200ms" — target metric + measurement plan defined
+  ⚠ REQ-005 — stress test conditions not specified (recommend: define concurrent user count)
+
+Security:
+  ✓ REQ-003 "JWT authentication" — mechanism + token expiry defined
+  ✗ Missing: rate limiting per endpoint (HIGH — recommend adding)
+
+Reliability:
+  ✓ No reliability NFRs — user acknowledged as acceptable for MVP
+
+... (one section per applicable quality dimension)
+```
+
+**Adaptation by expertise level:**
+
+- **Beginner:** "I checked whether each quality requirement is fully detailed. Here's what's complete and what might need more detail: [plain-language summary, one dimension at a time]"
+- **Intermediate:** Present the summary matrix with brief explanations.
+- **Expert:** "Quality checklist: 7/8 NFRs fully specified. Rate limiting unspecified — add to REQ-007 or defer?"
+
+### Step 8 — Persist
 
 Save requirements to `docs/sprints/sprint-{NN}/reqs.md`:
 

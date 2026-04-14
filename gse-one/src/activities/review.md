@@ -72,6 +72,7 @@ Execute review from multiple specialized perspectives. Each perspective produces
 - Identify untested requirements
 - Detect scope creep (changes not traced to any requirement)
 - Verify acceptance criteria satisfaction
+- Verify quality checklist was completed during REQS (Step 7). If the quality coverage matrix is absent from `reqs.md` → create finding severity MEDIUM: "Quality assurance checklist was not run during requirements phase — NFR completeness unverified"
 
 #### 2d — Design Coherence (architect agent)
 

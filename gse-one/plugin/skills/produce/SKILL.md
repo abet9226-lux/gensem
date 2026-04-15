@@ -28,6 +28,20 @@ Before executing, read:
 6. `docs/sprints/sprint-{NN}/test-strategy.md` — test strategy (**mandatory**)
 
 
+## Execution Model
+
+**PRODUCE is an isolated activity** — the orchestrator delegates each TASK to a **sub-agent with a fresh context** (see Context Architecture in the orchestrator). This ensures the production phase has a clean context window, uncluttered by prior COLLECT/ASSESS/PLAN/REQS/DESIGN discussions.
+
+**Before delegation**, the orchestrator:
+1. Saves a mini-checkpoint (`.gse/checkpoints/pre-produce-{timestamp}.yaml`)
+2. Spawns a sub-agent with: this SKILL.md, state files, sprint artefacts (reqs.md, design.md, test-strategy.md), and the TASK description
+3. Claude Code: `Agent` tool with `isolation: "worktree"` (if worktree strategy)
+4. Cursor: subagent with isolated context
+
+**After delegation**, the orchestrator reads updated state files and displays the production summary to the user.
+
+If `--all` is specified, each TASK is delegated to its own sub-agent **sequentially** (parallel PRODUCE is not supported — tasks may have dependencies).
+
 ## Workflow
 
 ### Step 0 — Pre-production Guardrails (Hard — cannot be skipped)

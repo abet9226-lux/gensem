@@ -24,6 +24,7 @@ Before executing, read:
 1. `.gse/backlog.yaml` — current backlog state
 2. `.gse/status.yaml` — current sprint number
 3. `.gse/config.yaml` — GitHub integration settings (if enabled)
+4. `.gse/profile.yaml` — user profile (apply P9 Adaptive Communication to all output)
 
 ## Workflow
 

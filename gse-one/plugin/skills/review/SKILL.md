@@ -46,9 +46,27 @@ Before reviewing any TASK, verify test execution:
    ```
 4. The review operates on the **diff**, not the full file state. This ensures focus on what changed.
 
-### Step 2 — Standard Review
+### Step 2 — Parallel Review via Sub-agents
 
-Execute review from multiple specialized perspectives. Each perspective produces findings tagged with its agent role.
+**REVIEW is a parallel isolated activity** — each review perspective runs as a **separate sub-agent** with its own isolated context. This provides both a fresh context for each reviewer and faster execution.
+
+**Before delegation**, the orchestrator:
+1. Saves a mini-checkpoint (`.gse/checkpoints/pre-review-{timestamp}.yaml`)
+2. Prepares the review context: diff output (from Step 1), state files, sprint artefacts
+3. Spawns review sub-agents **in parallel**:
+   - **Claude Code:** Multiple `Agent` tool calls in a single message (parallel execution)
+   - **Cursor:** Multiple subagents (up to 8 in parallel)
+
+**Each sub-agent receives:**
+- Its specialized agent definition (from `agents/` directory)
+- The diff to review (from Step 1)
+- Relevant sprint artefacts (reqs.md, design.md, test-strategy.md)
+- `profile.yaml` (for P9 adaptation)
+- Instructions to return findings in the RVW-NNN format
+
+**After all sub-agents return**, the orchestrator merges all findings into a single `review.md`, deduplicates, and proceeds to Step 3 (Devil's Advocate).
+
+#### Sub-agents to spawn in parallel:
 
 #### 2a — Code Quality (code-reviewer agent)
 
@@ -96,6 +114,14 @@ Execute review from multiple specialized perspectives. Each perspective produces
 - Responsive design
 - User flow consistency
 - Error state handling in UI
+
+#### Finding merge protocol
+
+After all parallel sub-agents return:
+1. Collect all findings from each sub-agent
+2. Deduplicate: if two agents report the same issue (same file, same line range, same category), keep the higher-severity finding and note both perspectives
+3. Assign sequential RVW-NNN IDs to the merged findings
+4. Write the merged findings to `docs/sprints/sprint-{NN}/review.md`
 
 ### Step 3 — Devil's Advocate (P16)
 

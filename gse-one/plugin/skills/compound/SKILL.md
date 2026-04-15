@@ -27,6 +27,16 @@ Before executing, read:
 5. `docs/sprints/sprint-{NN}/review.md` — review findings for the sprint
 6. `docs/sprints/sprint-{NN}/release.md` — release notes (if delivery occurred)
 
+## Execution Model
+
+**COMPOUND is an isolated activity** — the orchestrator delegates it to a **sub-agent with a fresh context** (see Context Architecture in the orchestrator). By the end of a sprint, the main conversation context is heavily loaded with PRODUCE/REVIEW/FIX history. COMPOUND needs a clean context to analyze sprint artefacts objectively.
+
+**Before delegation**, the orchestrator:
+1. Saves a mini-checkpoint (`.gse/checkpoints/pre-compound-{timestamp}.yaml`)
+2. Spawns a sub-agent with: this SKILL.md, state files, all sprint artefacts (review.md, release.md, backlog), and the user profile
+
+**After delegation**, the orchestrator reads `compound.md` and displays the capitalization summary to the user.
+
 ## Workflow
 
 ### Step 1 — Axe 1: Project Capitalization

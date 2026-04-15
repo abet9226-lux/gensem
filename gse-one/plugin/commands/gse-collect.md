@@ -1,6 +1,8 @@
 ---
+name: "gse-collect"
 description: "Inventory artefacts from internal project and external sources. Triggered by /gse:collect."
 ---
+
 
 # GSE-One Collect — Artefact Inventory & External Sources
 

@@ -24,6 +24,7 @@ Before executing, read:
 3. `docs/sprints/sprint-{NN}/reqs.md` — requirements (for validation context)
 4. `docs/sprints/sprint-{NN}/design.md` — design (for structural context)
 5. `.gse/sources.yaml` — external sources (for import previews)
+6. `.gse/profile.yaml` — user profile (apply P9 Adaptive Communication to all output)
 
 ## Workflow
 

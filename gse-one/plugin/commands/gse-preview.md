@@ -1,6 +1,8 @@
 ---
+name: "gse-preview"
 description: "Simulate planned artefacts before production. Triggered by /gse:preview."
 ---
+
 
 # GSE-One Preview — Preview
 

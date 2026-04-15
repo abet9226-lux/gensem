@@ -9,7 +9,7 @@ Mono-plugin architecture: ONE directory deployable on both Claude Code and Curso
 
 Source layout:
     src/principles/    → 16 principle definitions (P1-P16)
-    src/activities/    → 22 activity definitions, each generated as a skill (plugin/skills/<name>/SKILL.md)
+    src/activities/    → 22 activity definitions (→ skills for Claude, commands for Cursor)
     src/agents/        → 9 agent roles (8 specialized + gse-orchestrator)
     src/templates/     → 15 artefact & config templates
 
@@ -17,7 +17,8 @@ Generated output:
     plugin/            → Single deployable directory
         .claude-plugin/plugin.json    ← Claude Code manifest
         .cursor-plugin/plugin.json    ← Cursor manifest
-        skills/                       ← Shared (22 skills)
+        skills/                       ← Claude Code activities (22 SKILL.md in subdirs)
+        commands/                     ← Cursor activities (22 flat gse-<name>.md files)
         agents/                       ← Shared (9 agents, incl. orchestrator)
         templates/                    ← Shared (15 templates)
         rules/000-gse-methodology.mdc ← Cursor-specific (generated)
@@ -25,12 +26,17 @@ Generated output:
         hooks/hooks.cursor.json       ← Cursor-specific (generated)
         settings.json                 ← Claude-specific (generated)
 
+Activities are generated to the correct concept per platform:
+  - Claude Code: skills/ (SKILL.md in subdirs) → /gse:go, /gse:plan (auto-namespaced)
+  - Cursor: commands/ (flat gse-<name>.md) → /gse-go, /gse-plan (prefixed kebab-case)
+
 The orchestrator agent and the .mdc rule are generated from the SAME
 src/principles/ content, ensuring identical methodology on both platforms.
 """
 
 import argparse
 import json
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -87,6 +93,27 @@ def copy_file(src: Path, dst: Path) -> None:
     ensure_dir(dst.parent)
     shutil.copy2(src, dst)
 
+def generate_command(src: Path, dst: Path, cmd_name: str) -> None:
+    """Convert a SKILL.md source to a flat Cursor command file (gse-<name>.md).
+
+    Injects name/description frontmatter in kebab-case for Cursor auto-discovery.
+    """
+    content = src.read_text(encoding="utf-8")
+    if content.startswith("---"):
+        parts = content.split("---", 2)
+        if len(parts) >= 3:
+            # Extract description from source frontmatter
+            desc_match = re.search(r'description:\s*"(.+?)"', parts[1])
+            desc = desc_match.group(1) if desc_match else f"GSE-One {cmd_name} command"
+            body = parts[2]
+            content = (
+                f'---\n'
+                f'name: "gse-{cmd_name}"\n'
+                f'description: "{desc}"\n'
+                f'---\n{body}'
+            )
+    write_file(dst, content)
+
 def extract_body(filepath: Path) -> str:
     """Extract markdown body after YAML frontmatter (after second ---)."""
     content = filepath.read_text(encoding="utf-8")
@@ -109,8 +136,10 @@ def generate(clean: bool = False) -> None:
         shutil.rmtree(PLUGIN)
         print("  cleaned plugin/\n")
 
-    # 1. Skills (shared)
-    print("Skills:")
+    # 1. Activities → Skills (Claude Code) + Commands (Cursor)
+    activity_count = sum(1 for n in ACTIVITY_NAMES if (ACTIVITIES_DIR / f"{n}.md").exists())
+
+    print("Skills (Claude Code):")
     for name in ACTIVITY_NAMES:
         src_file = ACTIVITIES_DIR / f"{name}.md"
         dst_file = PLUGIN / "skills" / name / "SKILL.md"
@@ -118,7 +147,17 @@ def generate(clean: bool = False) -> None:
             copy_file(src_file, dst_file)
         else:
             print(f"  WARNING: missing {name}.md")
-    print(f"  {sum(1 for n in ACTIVITY_NAMES if (ACTIVITIES_DIR / f'{n}.md').exists())}/22\n")
+    print(f"  {activity_count}/22\n")
+
+    print("Commands (Cursor):")
+    for name in ACTIVITY_NAMES:
+        src_file = ACTIVITIES_DIR / f"{name}.md"
+        dst_file = PLUGIN / "commands" / f"gse-{name}.md"
+        if src_file.exists():
+            generate_command(src_file, dst_file, name)
+        else:
+            print(f"  WARNING: missing {name}.md")
+    print(f"  {activity_count}/22\n")
 
     # 2. Agents — 8 specialized (shared) + orchestrator (generated)
     print("Agents (specialized):")
@@ -208,7 +247,7 @@ def generate(clean: bool = False) -> None:
         "version": VERSION,
         "author": {"name": "GSE-One Project"},
         "repository": "https://github.com/gse-one/gse-one",
-        "skills": "./skills/",
+        "commands": "./commands/",
         "agents": "./agents/",
         "rules": "./rules/",
         "hooks": "./hooks/hooks.cursor.json",
@@ -318,22 +357,22 @@ def verify() -> None:
     errors = []
 
     # Shared components
-    skills = sum(1 for n in ACTIVITY_NAMES if (PLUGIN / "skills" / n / "SKILL.md").exists())
     agents = sum(1 for f in SPECIALIZED_AGENTS if (PLUGIN / "agents" / f).exists())
     orchestrator = (PLUGIN / "agents" / "gse-orchestrator.md").exists()
     templates = sum(1 for _ in (PLUGIN / "templates").rglob("*") if _.is_file()) if (PLUGIN / "templates").exists() else 0
 
-    print(f"  Skills:      {skills}/22")
     print(f"  Agents:      {agents}/8 specialized + orchestrator={'OK' if orchestrator else 'MISSING'}")
     print(f"  Templates:   {templates}/15")
 
-    if skills < 22: errors.append(f"Missing {22-skills} skills")
     if agents < 8: errors.append(f"Missing {8-agents} specialized agents")
     if not orchestrator: errors.append("Missing gse-orchestrator.md")
     if templates < 15: errors.append(f"Missing {15-templates} templates")
 
     # Claude-specific
-    print("\n  Claude Code:")
+    skills = sum(1 for n in ACTIVITY_NAMES if (PLUGIN / "skills" / n / "SKILL.md").exists())
+    print(f"\n  Claude Code:")
+    print(f"    Skills:    {skills}/22")
+    if skills < 22: errors.append(f"Claude: missing {22-skills} skills")
     for name, path in {
         "plugin.json": PLUGIN / ".claude-plugin" / "plugin.json",
         "settings.json": PLUGIN / "settings.json",
@@ -344,7 +383,10 @@ def verify() -> None:
         if not ok: errors.append(f"Claude: missing {name}")
 
     # Cursor-specific
-    print("\n  Cursor:")
+    commands = sum(1 for n in ACTIVITY_NAMES if (PLUGIN / "commands" / f"gse-{n}.md").exists())
+    print(f"\n  Cursor:")
+    print(f"    Commands:  {commands}/22")
+    if commands < 22: errors.append(f"Cursor: missing {22-commands} commands")
     for name, path in {
         "plugin.json": PLUGIN / ".cursor-plugin" / "plugin.json",
         "000-gse-methodology.mdc": PLUGIN / "rules" / "000-gse-methodology.mdc",

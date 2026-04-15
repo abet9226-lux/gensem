@@ -24,6 +24,7 @@ Before executing, read:
 3. `.gse/backlog.yaml` — current backlog (pool and sprint items)
 4. `.gse/sources.yaml` — external sources (if any)
 5. `docs/sprints/sprint-{NN}/reqs.md` — requirements for current sprint (if any)
+6. `.gse/profile.yaml` — user profile (apply P9 Adaptive Communication to all output)
 
 ## Workflow
 

@@ -1,6 +1,8 @@
 ---
+name: "gse-health"
 description: "Display project health dashboard with 8 dimensions. Triggered by /gse:health."
 ---
+
 
 # GSE-One Health — Health Dashboard
 

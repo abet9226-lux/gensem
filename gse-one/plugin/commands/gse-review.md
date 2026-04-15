@@ -1,6 +1,8 @@
 ---
+name: "gse-review"
 description: "Review all artefacts in current sprint. Operates on branch diff. Includes devil's advocate (P16). Triggered by /gse:review."
 ---
+
 
 # GSE-One Review — Review
 

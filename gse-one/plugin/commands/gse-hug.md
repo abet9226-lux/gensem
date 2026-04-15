@@ -1,6 +1,8 @@
 ---
+name: "gse-hug"
 description: "Establish or update user profile. Triggered when user context is unknown or /gse:hug is called."
 ---
+
 
 # GSE-One HUG — User Profile
 

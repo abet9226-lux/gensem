@@ -196,6 +196,25 @@ Verify the project environment is ready. **This step is blocking** — do NOT me
    - Add to `.gitignore`: entries for `.gse/local/` (machine-specific state)
 3. **Save profile** — Write the completed profile to `.gse/profile.yaml` (or `.gse/profiles/{username}.yaml` in team mode)
 
+### Step 4.5 — Update Mode (`--update`)
+
+When called with `--update`, the profile already exists. Only re-ask dimensions the user wants to change:
+
+1. **Load current profile** — Read `.gse/profile.yaml` and display current values as a summary.
+2. **Ask what to change** — Present all dimensions with their current values. The user selects which ones to modify.
+3. **Re-interview selected dimensions** — Run Step 2 interview only for the selected dimensions.
+4. **Detect behavioral impact** — Compare old and new values. If any of the following dimensions changed, notify the user of the consequences:
+
+   | Changed dimension | Impact | Notification |
+   |---|---|---|
+   | `it_expertise` | Vocabulary, question cadence, artefact approval, knowledge transfer | "I'll adjust how I explain things and how many questions I ask at once." |
+   | `language.chat` | All chat output language | "From now on, I'll communicate in [new language]." |
+   | `decision_involvement` | Gate frequency, supervised mode override | "I'll [ask more / ask less] before making technical choices." |
+   | `preferred_verbosity` | Output length and detail level | "I'll make my responses [shorter / more detailed]." |
+   | `contextual_tips` | Inline micro-explanations | "I'll [start / stop] adding learning tips during activities." |
+
+5. **Save and apply immediately** — Update `profile.yaml` with the new values and set `updated` timestamp. The changes take effect on the very next skill invocation — no restart needed.
+
 ### Step 5 — Profile Persistence
 
 Save the profile as YAML:

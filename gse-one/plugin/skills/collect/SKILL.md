@@ -24,6 +24,7 @@ Before executing, read:
 2. `.gse/config.yaml` — project configuration
 3. `.gse/sources.yaml` — existing source inventory (if any)
 4. `.gse/backlog.yaml` — current backlog (for cross-referencing)
+5. `.gse/profile.yaml` — user profile (apply P9 Adaptive Communication to all output)
 
 ## Workflow
 

@@ -1,6 +1,8 @@
 ---
+name: "gse-compound"
 description: "Capitalize learnings across 3 axes. Triggered by /gse:compound at end of sprint."
 ---
+
 
 # GSE-One Compound — Capitalization
 

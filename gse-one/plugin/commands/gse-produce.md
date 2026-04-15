@@ -1,6 +1,8 @@
 ---
+name: "gse-produce"
 description: "Execute production plan in isolated worktree. Creates feature branch + worktree per task. Triggered by /gse:produce."
 ---
+
 
 # GSE-One Produce — Production
 

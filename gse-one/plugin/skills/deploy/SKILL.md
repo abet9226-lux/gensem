@@ -22,6 +22,7 @@ Read before execution:
 1. `.gse/config.yaml` — deploy section (provider, server type, datacenter)
 2. `.gse/deploy.json` — infrastructure state (if exists)
 3. `.env` — credentials and configuration (if exists)
+4. `.gse/profile.yaml` — user profile (apply P9 Adaptive Communication to all output)
 
 ## Workflow
 

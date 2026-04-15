@@ -1,6 +1,8 @@
 ---
+name: "gse-backlog"
 description: "View and manage project backlog. Triggered when user asks about tasks, work items, what's left to do."
 ---
+
 
 # GSE-One Backlog — Unified Work Item Management
 

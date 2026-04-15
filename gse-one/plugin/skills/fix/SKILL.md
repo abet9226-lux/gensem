@@ -24,6 +24,7 @@ Before executing, read:
 2. `.gse/config.yaml` — git strategy (worktree/branch-only/none)
 3. `.gse/backlog.yaml` — tasks with review findings
 4. `docs/sprints/sprint-{NN}/review.md` — review findings (RVW-NNN entries)
+5. `.gse/profile.yaml` — user profile (apply P9 Adaptive Communication to all output)
 
 ## Workflow
 

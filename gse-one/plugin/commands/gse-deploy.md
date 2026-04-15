@@ -1,6 +1,8 @@
 ---
+name: "gse-deploy"
 description: "Deploy the current project to a Hetzner server via Coolify. Adapts to the user's situation: from zero infrastructure (solo) to a pre-configured shared server (training). Triggered by /gse:deploy."
 ---
+
 
 # GSE-One Deploy — Hetzner Deployment
 

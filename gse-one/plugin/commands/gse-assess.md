@@ -1,6 +1,8 @@
 ---
+name: "gse-assess"
 description: "Evaluate artefact status against project goals. Identifies covered, partial, and uncovered goals."
 ---
+
 
 # GSE-One Assess — Gap Analysis
 

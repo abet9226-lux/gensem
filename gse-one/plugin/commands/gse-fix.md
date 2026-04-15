@@ -1,6 +1,8 @@
 ---
+name: "gse-fix"
 description: "Apply fixes from review findings in isolated branch. Triggered by /gse:fix."
 ---
+
 
 # GSE-One Fix — Fix
 

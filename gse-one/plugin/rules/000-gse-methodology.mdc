@@ -109,6 +109,60 @@ When `profile.it_expertise` is `beginner`, apply these rules to ALL chat output 
 
 **Test Campaign Summary rule:** After EVERY test execution during PRODUCE, the agent MUST display a summary inline in the chat. For beginners: map test names to feature descriptions from REQS. For experts: show file-level technical summary. This makes the test-driven approach visible — tests are not hidden in files.
 
+## Profile Reactivity
+
+**Cross-cutting rule:** Before executing ANY skill, reload `.gse/profile.yaml`. Apply P9 (Adaptive Communication) and the Beginner Output Filter to ALL output, regardless of which skill is active. This is not optional — it is a permanent cross-cutting concern.
+
+**Mid-cycle profile changes:** If the user runs `/gse:hug --update` during a sprint, the updated profile takes effect **immediately** for all subsequent interactions. Dimensions that affect behavior in cascade:
+- `it_expertise` → vocabulary, question cadence, artefact approval style, knowledge transfer depth
+- `language.chat` → all chat output language
+- `decision_involvement` → Gate frequency during PRODUCE (supervised mode override)
+- `preferred_verbosity` → output length and ceremony level
+- `contextual_tips` → inline micro-explanations on/off
+
+No restart or `/gse:go` is needed — the next skill invocation reads the updated profile and adapts.
+
+## Context Architecture
+
+The LLM context window is a finite resource. A full sprint (COLLECT → COMPOUND) accumulates too much history for a single conversation. To prevent context saturation, heavy activities are **delegated to sub-agents** with isolated contexts, while the orchestrator stays lightweight.
+
+### Activity classification
+
+| Category | Activities | Execution |
+|---|---|---|
+| **Inline** (orchestrator context) | HUG, GO, COLLECT, ASSESS, PLAN, STATUS, HEALTH, PAUSE, RESUME, BACKLOG, LEARN, REQS, DESIGN, PREVIEW, TESTS (`--strategy`), DELIVER, INTEGRATE | Run directly in the main conversation |
+| **Isolated** (sub-agent, fresh context) | PRODUCE (per TASK), COMPOUND | Delegated to a sub-agent — the sub-agent reads state from files, does its work, and returns a summary |
+| **Parallel isolated** (multiple sub-agents) | REVIEW | Each review perspective runs as a separate sub-agent in parallel |
+
+### Sub-agent delegation protocol
+
+Before spawning a sub-agent for an isolated activity:
+
+1. **Mini-checkpoint** — Save a lightweight snapshot to `.gse/checkpoints/pre-{activity}-{timestamp}.yaml` with current `status.yaml` and `backlog.yaml` state. This is a safety net — if the sub-agent fails, the orchestrator can recover.
+
+2. **Context brief** — Pass the sub-agent only what it needs (not the full conversation history):
+   - The activity's SKILL.md / command instructions
+   - Relevant state files: `status.yaml`, `config.yaml`, `profile.yaml`, `backlog.yaml`
+   - Relevant sprint artefacts (reqs.md, design.md, test-strategy.md — as needed)
+   - The specific TASK description (for PRODUCE)
+
+3. **Platform-specific delegation:**
+   - **Claude Code:** Use the `Agent` tool. For PRODUCE with worktree strategy, use `isolation: "worktree"` to give the sub-agent its own git worktree.
+   - **Cursor:** Spawn a subagent (up to 8 in parallel for REVIEW).
+
+4. **Result integration** — When the sub-agent returns, the orchestrator:
+   - Reads the updated state files from disk (the sub-agent wrote them)
+   - Displays a summary to the user (adapted to expertise per P9)
+   - Proceeds to the next activity
+
+5. **Failure handling** — If a sub-agent fails or returns an error:
+   - Restore from the mini-checkpoint
+   - Report the failure to the user (Gate: retry / skip / pause / discuss)
+
+### Post-write summary rule
+
+After writing any artefact (reqs.md, design.md, review.md, compound.md, test-strategy.md), the agent MUST NOT keep the full artefact content in conversational context. Instead, produce a **3-line summary** of what was written. The file on disk is the source of truth — re-read it when needed. This applies to both inline activities and sub-agents.
+
 ## State Management
 
 - **Always load:** status.yaml, profile.yaml, config.yaml, backlog.yaml (sprint items). Total ~100-200 lines.

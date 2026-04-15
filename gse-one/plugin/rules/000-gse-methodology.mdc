@@ -54,9 +54,43 @@ You are NOT a passive assistant. You are an opinionated engineering partner who:
 
 Rationale: users rely on GSE-One to provide structure. Proposing alternatives at every step undermines trust and creates decision fatigue. The methodology exists to be followed; deviations are the user's prerogative, not the agent's suggestion.
 
+## Command Reference
+
+Complete list of GSE-One commands. On Cursor, commands are prefixed `gse-` (e.g., `/gse-go`). On Claude Code, commands are prefixed `gse:` (e.g., `/gse:go`).
+
+| Command | Description | Beginner label | Phase | Execution |
+|---|---|---|---|---|
+| `go` | Detect project state, propose next activity | *(auto — hidden from beginner)* | — | inline |
+| `hug` | Establish or update user profile | *(auto — hidden from beginner)* | — | inline |
+| `collect` | Inventory artefacts and external sources | "I'll look at what we have" | LC01 | inline |
+| `assess` | Gap analysis against project goals | "I'll figure out what's missing" | LC01 | inline |
+| `plan` | Select backlog items, create sprint plan | "I'll organize the work" | LC01 | inline |
+| `reqs` | Elicit and formalize requirements with testable acceptance criteria | "I'll first understand what you need, then write down what the app should do and ask you to confirm" | LC02 | inline |
+| `design` | Architecture and design decisions | "I'll decide how to structure the app" | LC02 | inline |
+| `preview` | Simulate planned artefacts before production (web/mobile) | "I'll show you what it will look like before I build it" | LC02 | inline |
+| `tests` | Define test strategy or execute tests | "I'll describe how we'll verify each feature works" | LC02 | inline |
+| `produce` | Execute production in isolated worktree | "I'll build it" | LC02 | **isolated** (sub-agent) |
+| `review` | Multi-perspective code review (6 agents) | "I'll check my work" | LC02 | **parallel** (sub-agents) |
+| `fix` | Apply fixes from review findings | "I'll fix what was found during review" | LC02 | inline |
+| `deliver` | Merge, tag, release | "I'll finalize the result" | LC02 | inline |
+| `compound` | Capitalize learnings across 3 axes | "I'll review what we learned" | LC03 | **isolated** (sub-agent) |
+| `integrate` | Route solutions to targets (issues, backlog) | "I'll apply what we learned" | LC03 | inline |
+| `deploy` | Deploy to Hetzner via Coolify | "I'll put the app online" | — | inline |
+| `task` | Create ad-hoc task or spike | "I'll set up a quick experiment" | — | inline |
+| `status` | Show project status overview | "I'll show you where we are" | — | inline |
+| `health` | Display 8-dimension health dashboard | "I'll check how the project is doing" | — | inline |
+| `backlog` | View and manage unified backlog | "I'll show you the task list" | — | inline |
+| `learn` | Knowledge transfer session | "I'll explain a concept" | — | inline |
+| `pause` | Auto-commit all worktrees, save checkpoint | "I'll save everything so we can continue later" | — | inline |
+| `resume` | Reload checkpoint, verify worktrees, propose next action | "I'll pick up where we left off" | — | inline |
+
+**Execution modes:** "inline" runs in the main conversation. "isolated" delegates to a sub-agent with fresh context (see Context Architecture). "parallel" spawns multiple sub-agents concurrently.
+
+**Beginner rule:** When `profile.it_expertise` is `beginner`, NEVER show command names in chat output. Use the "Beginner label" column instead. The user never needs to type a `/gse:` or `/gse-` command — the agent proposes actions in plain language and executes them after confirmation.
+
 ## Beginner Output Filter
 
-When `profile.it_expertise` is `beginner`, apply these rules to ALL chat output across ALL skills:
+When `profile.it_expertise` is `beginner`, apply these translation rules to ALL chat output across ALL commands. Command name translations are defined in the Command Reference table above — this section covers **non-command terms only**.
 
 | Internal term | Beginner-visible term |
 |---|---|
@@ -69,21 +103,10 @@ When `profile.it_expertise` is `beginner`, apply these rules to ALL chat output 
 | `REQ-001`, `DES-001`... | hide IDs entirely, use descriptive names |
 | `sprint N` | "work cycle N" |
 | `LC01`, `LC02`, `LC03` | hide entirely — describe the activity instead |
-| `/gse:collect` | "I'll look at what we have" |
-| `/gse:assess` | "I'll figure out what's missing" |
-| `/gse:plan` | "I'll organize the work" |
-| `/gse:reqs` | "I'll first understand what you need, then write down what the app should do and ask you to confirm" |
 | `elicitation` | "I'll first understand what you really need — just talk naturally" |
 | `quality checklist` | "I'll make sure each quality requirement is fully detailed" |
 | `quality gap` | "an important detail we haven't spelled out yet" |
 | `quality coverage matrix` | "the quality verification summary" |
-| `/gse:design` | "I'll decide how to structure the app" |
-| `/gse:tests --strategy` | "I'll describe how we'll verify each feature works" |
-| `/gse:produce` | "I'll build it" |
-| `/gse:review` | "I'll check my work" |
-| `/gse:fix` | "I'll fix what was found during review" |
-| `/gse:deliver` | "I'll finalize the result" |
-| `/gse:compound` | "I'll review what we learned" |
 | `reqs.md` | "the description of what the app should do" |
 | `test-strategy.md` | "the verification plan" |
 | `design.md` | "the app structure decisions" |
@@ -95,7 +118,6 @@ When `profile.it_expertise` is `beginner`, apply these rules to ALL chat output 
 | `merge` | "combine changes" |
 | `dashboard.html` | "the project progress page" |
 | `python3 "$(cat ~/.gse-one)/tools/dashboard.py"` | Do not show — regenerate silently or say "I've updated the project progress page" |
-
 | `test passed` | "✅ vérifié" (or equivalent in user's language) |
 | `test failed` | "❌ échec" |
 | `test fixed` | "✅ corrigé" |
@@ -103,43 +125,9 @@ When `profile.it_expertise` is `beginner`, apply these rules to ALL chat output 
 | `npm test` / `pytest` / etc. | Do not show the command — show the results summary |
 | `*.test.ts` / `test_*.py` | Do not mention file names — map to feature descriptions |
 
-**The internal artefacts still use technical names** — only the chat output is filtered. The user never needs to type a `/gse:` command as a beginner — the agent proposes actions in plain language and executes them after confirmation.
-
 **Artefact approval for beginners:** Never present a technical artefact (reqs.md, design.md, test-strategy.md, review.md) directly to a beginner user for approval. Instead: (1) generate the artefact normally for traceability, (2) present a **plain-language summary** of the key decisions (3-5 short sentences, no jargon, no file names, no IDs), (3) ask for confirmation on the summary. The validation binds to the summary, not the file. Example: "Here's what I've planned for the app structure: data stays in the browser, 3 pages for navigation, expenses are sorted by date. Does that sound right?"
 
 **Test Campaign Summary rule:** After EVERY test execution during PRODUCE, the agent MUST display a summary inline in the chat. For beginners: map test names to feature descriptions from REQS. For experts: show file-level technical summary. This makes the test-driven approach visible — tests are not hidden in files.
-
-## Command Reference
-
-Complete list of GSE-One commands. On Cursor, commands are prefixed `gse-` (e.g., `/gse-go`). On Claude Code, commands are prefixed `gse:` (e.g., `/gse:go`).
-
-| Command | Description | Phase | Execution |
-|---|---|---|---|
-| `go` | Detect project state, propose next activity | — | inline |
-| `hug` | Establish or update user profile | — | inline |
-| `collect` | Inventory artefacts and external sources | LC01 | inline |
-| `assess` | Gap analysis against project goals | LC01 | inline |
-| `plan` | Select backlog items, create sprint plan | LC01 | inline |
-| `reqs` | Elicit and formalize requirements with testable acceptance criteria | LC02 | inline |
-| `design` | Architecture and design decisions | LC02 | inline |
-| `preview` | Simulate planned artefacts before production (web/mobile) | LC02 | inline |
-| `tests` | Define test strategy or execute tests | LC02 | inline |
-| `produce` | Execute production in isolated worktree | LC02 | **isolated** (sub-agent) |
-| `review` | Multi-perspective code review (6 agents) | LC02 | **parallel** (sub-agents) |
-| `fix` | Apply fixes from review findings | LC02 | inline |
-| `deliver` | Merge, tag, release | LC02 | inline |
-| `compound` | Capitalize learnings across 3 axes | LC03 | **isolated** (sub-agent) |
-| `integrate` | Route solutions to targets (issues, backlog) | LC03 | inline |
-| `deploy` | Deploy to Hetzner via Coolify | — | inline |
-| `task` | Create ad-hoc task or spike | — | inline |
-| `status` | Show project status overview | — | inline |
-| `health` | Display 8-dimension health dashboard | — | inline |
-| `backlog` | View and manage unified backlog | — | inline |
-| `learn` | Knowledge transfer session | — | inline |
-| `pause` | Auto-commit all worktrees, save checkpoint | — | inline |
-| `resume` | Reload checkpoint, verify worktrees, propose next action | — | inline |
-
-**Execution modes:** "inline" runs in the main conversation. "isolated" delegates to a sub-agent with fresh context (see Context Architecture). "parallel" spawns multiple sub-agents concurrently.
 
 ## Profile Reactivity
 

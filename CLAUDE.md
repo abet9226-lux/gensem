@@ -19,10 +19,18 @@ This is the **gensem** repository — the source for the GSE-One plugin, an AI e
 
 ## Critical rules
 
-### Build pipeline
-- **Always run `cd gse-one && python3 gse_generate.py --verify` before committing** — it regenerates plugin/ from src/ and bumps manifest versions from VERSION.
+### Build pipeline — mandatory for every commit to main
+Every commit to main MUST follow this full pipeline:
+1. **Bump** `VERSION` (patch for fixes, minor for features)
+2. **Generate** — `cd gse-one && python3 gse_generate.py --verify`
+3. **Add all** — VERSION, manifests, all regenerated files in `plugin/`
+4. **Commit** — with `feat:`, `fix:`, `docs:`, or `chore:` prefix
+5. **Push** — `git push origin main`
+
+Never skip a step. Never commit without regenerating. Never push without bumping.
+
 - Never edit files in `gse-one/plugin/` directly except `plugin/tools/` — the generator overwrites everything else from `src/`.
-- Changes to skills go in `src/activities/`, changes to agents go in `src/agents/`.
+- Changes to activities go in `src/activities/`, changes to agents go in `src/agents/`.
 - The orchestrator and .mdc rule are generated from the same source — body parity is verified automatically.
 
 ### Tool architecture
@@ -35,9 +43,9 @@ This is the **gensem** repository — the source for the GSE-One plugin, an AI e
 - Bump `VERSION` file, then run the generator — it propagates to both plugin.json manifests.
 - Commit style: `feat:`, `fix:`, `docs:` prefixes. Check recent `git log` for conventions.
 
-### Files to keep in sync
-- `src/activities/*.md` ↔ `plugin/skills/*/SKILL.md` (via generator)
-- `src/agents/gse-orchestrator.md` ↔ `plugin/agents/gse-orchestrator.md` + `plugin/rules/000-gse-methodology.mdc` (via generator)
+### Files to keep in sync (all via generator)
+- `src/activities/*.md` → `plugin/skills/*/SKILL.md` (Claude Code) + `plugin/commands/gse-*.md` (Cursor)
+- `src/agents/gse-orchestrator.md` → `plugin/agents/gse-orchestrator.md` + `plugin/rules/000-gse-methodology.mdc`
 - Changes in spec should be reflected in design doc changelog and vice versa.
 
 ## Language

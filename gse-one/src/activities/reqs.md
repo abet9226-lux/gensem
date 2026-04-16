@@ -24,7 +24,7 @@ Before executing, read:
 1. `.gse/status.yaml` — current sprint number
 2. `.gse/backlog.yaml` — sprint tasks that need requirements
 3. `.gse/profile.yaml` — user preferences (decision involvement, verbosity)
-4. `docs/sprints/sprint-{NN}/plan.md` — sprint plan (for scope context)
+4. `.gse/plan.yaml` — living sprint plan (for scope context)
 5. `docs/sprints/sprint-{NN}/reqs.md` — existing requirements (if any)
 6. `.gse/sources.yaml` — external sources that may inform requirements
 

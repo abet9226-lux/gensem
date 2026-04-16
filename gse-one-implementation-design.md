@@ -173,7 +173,7 @@ Read `.gse/config.yaml` → `git.strategy`.
    - Format: `gse/sprint-<N>/<type>/<short-description>`
    - Type is derived from task artefact type: requirement/design → `docs/`,
      code → `feat/`, test → `test/`, fix → `fix/`
-   - Record branch name in the plan artefact for each task
+   - Record branch name in `.gse/plan.yaml` (`tasks[].branch`) and in `.gse/backlog.yaml` for each task
 
 4. Update each TASK entry in `.gse/backlog.yaml` with `git.branch` (planned, not yet created) and `git.branch_status: planned`.
 
@@ -191,7 +191,7 @@ Read `.gse/config.yaml` → `git.strategy`.
 
 **If strategy is `worktree`:**
 
-1. Get the planned branch name from the plan artefact for this task.
+1. Get the planned branch name from `.gse/plan.yaml` (`tasks[].branch`) or `.gse/backlog.yaml` (`git.branch`) for this task.
 
 2. Create the feature branch from the sprint branch:
    ```bash
@@ -1563,6 +1563,7 @@ If this is the first session and git IS available but `git.strategy` is not set:
 │   ├── alice.yaml
 │   └── bob.yaml
 ├── status.yaml                      # Sprint state, health score, complexity budget, phase
+├── plan.yaml                        # Living sprint plan (workflow, budget, coherence)
 ├── backlog.yaml                     # Unified work items (TASK) with git state per item
 ├── sources.yaml                     # External source registry
 ├── decisions.md                     # Decision journal (Inform + Gate tiers)
@@ -1570,6 +1571,31 @@ If this is the first session and git IS available but `git.strategy` is not set:
 └── checkpoints/                     # Session checkpoints
     └── checkpoint-YYYY-MM-DD-HHMM.yaml
 ```
+
+### 10.1 Sprint Plan Lifecycle (`.gse/plan.yaml`)
+
+`.gse/plan.yaml` is a **living document** maintained by the orchestrator, not a static artefact. Its schema (goal, tasks, budget, workflow, coherence, risks) is defined in `src/activities/plan.md`.
+
+**Creation** — Written by `/gse:plan --strategic` at sprint start. `workflow.expected` is initialized from the project mode:
+
+| Mode | workflow.expected |
+|------|-------------------|
+| Full | `[collect, assess, plan, reqs, design, tests, produce, review, deliver]` (plus `preview` after `design` for web/mobile) |
+| Lightweight | `[plan, produce, deliver]` |
+| Micro | no `plan.yaml` — orchestrator falls back to file-existence checks |
+
+**Maintenance** — After every activity transition, the orchestrator executes the **Sprint Plan Maintenance** protocol (defined in `gse-orchestrator.md`):
+1. Move current activity from `workflow.active` to `workflow.completed` (with `completed_at` + notes).
+2. Pop the next item from `workflow.pending` → `workflow.active`; record conditional skips in `workflow.skipped` with reason.
+3. Evaluate non-blocking coherence: `budget_pressure` (>80% consumed with tasks remaining), `significant_scope_drift` (>50% tasks changed), `velocity_risk` (produce phase only).
+4. React by mode: Full → Inform; Lightweight → one-line Inform; Micro → silent.
+5. Update `status.yaml` cursor fields (`last_activity`, `last_activity_timestamp`, `lifecycle_phase`).
+
+**Archival** — At DELIVER Step 9, the orchestrator reads `.gse/plan.yaml`, generates `docs/sprints/sprint-{NN}/plan-summary.md` (using the `plan-summary.md` template), and sets `plan.yaml.status: completed`. The snapshot is read-only — never consumed by the orchestrator, only used for human reference and COMPOUND process-deviation analysis.
+
+**Reset** — At the start of the next sprint, `/gse:plan --strategic` overwrites `.gse/plan.yaml` with a fresh plan for the new sprint. The prior sprint's `plan-summary.md` remains in its sprint directory as the durable archive.
+
+**Resilience** — `.gse/plan.yaml` is validated on write (YAML parseable). On corruption, the orchestrator restores from the latest checkpoint in `.gse/checkpoints/` and reports the error.
 
 **.gitignore additions** (applied by `/gse:hug` on first run):
 

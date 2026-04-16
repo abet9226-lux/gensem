@@ -22,6 +22,7 @@ Before executing, read:
 2. `.gse/config.yaml` — project configuration (if it exists)
 3. `.gse/backlog.yaml` — work items and their statuses (if it exists)
 4. `.gse/profile.yaml` — user profile (if it exists)
+5. `.gse/plan.yaml` — living sprint plan (workflow, budget, coherence) — primary source for decision tree (if it exists)
 
 
 ## Workflow
@@ -93,25 +94,31 @@ This step is a **safety net** for cases where HUG Step 4 was interrupted or the 
 
 ### Step 3 — Determine Next Action (Decision Tree)
 
-Read `status.yaml` fields: `current_sprint`, `lifecycle_phase`, `last_activity`, `last_activity_timestamp`.
+Read `status.yaml` fields: `current_sprint`, `lifecycle_phase`, `last_activity`, `last_activity_timestamp`, AND `.gse/plan.yaml` when it exists.
+
+**Primary source — `.gse/plan.yaml`:** When `plan.yaml` exists with `status: active`, use `workflow.active` and `workflow.pending` to decide the next activity. This is more robust than checking for individual artefact files.
+
+**Fallback:** If `plan.yaml` is absent (Micro mode or pre-v0.20 projects), fall back to file-existence checks against sprint artefacts (`reqs.md`, `design.md`, `test-strategy.md`, …) in `docs/sprints/sprint-{NN}/`.
 
 Evaluate states **in order** — the first matching row wins.
 
 | Current State | Proposed Action |
 |---------------|-----------------|
 | No sprint defined | Sub-decision below |
-| Plan exists, not approved | Resume PLAN — present plan summary, ask for approval Gate |
-| Plan approved, **no requirements** (`reqs.md` absent or empty) | Start REQS — **test-driven requirements**: every REQ MUST include testable acceptance criteria (Given/When/Then or equivalent) and identify open technical questions. These criteria become the spec for validation tests. **Hard guardrail: PRODUCE MUST NOT start until REQS exist.** |
-| Reqs done, **no design** (optional) | If tasks involve architecture decisions (new data model, API design, component structure): start DESIGN. Otherwise: proceed to PREVIEW or TESTS. |
-| Design done (or skipped), **no preview** and `project_domain` is `web` or `mobile` | Start PREVIEW — show mockup/prototype for user validation before coding. For CLI/API/data/embedded: skip silently. |
-| Design + preview done (or skipped), **no test strategy** (no `test-strategy.md`) | Start TESTS `--strategy` — define test pyramid: verification tests (from DESIGN) + validation tests (from REQS acceptance criteria). |
-| Tasks ready (reqs + design + test strategy + preview done or skipped), none in-progress | Start PRODUCE on first planned TASK |
-| Tasks with status `in-progress` | Resume PRODUCE — show current task, propose continuation |
-| All sprint tasks `done`, no review | Start REVIEW — propose `/gse:review` (requires test evidence — will block if tests were skipped) |
-| Review done, fixes pending | Start FIX — propose `/gse:fix` |
-| All tasks reviewed, ready to deliver | Start DELIVER — propose `/gse:deliver` (requires REQ→TST coverage for must-priority requirements) |
-| All tasks delivered, no compound | Start LC03 — propose `/gse:compound` |
+| `plan.yaml` exists, `status: draft` | Resume PLAN — present plan summary, ask for approval Gate |
+| `plan.yaml.workflow.active == reqs` | Start REQS — **test-driven requirements**: every REQ MUST include testable acceptance criteria (Given/When/Then or equivalent) and identify open technical questions. These criteria become the spec for validation tests. **Hard guardrail: PRODUCE MUST NOT start until REQS exist.** |
+| `plan.yaml.workflow.active == design` | Start DESIGN. If tasks do not involve architecture decisions (new data model, API design, component structure), record `design` in `workflow.skipped` and advance. |
+| `plan.yaml.workflow.active == preview` | Start PREVIEW — show mockup/prototype for user validation before coding. For CLI/API/data/embedded: `preview` should already be in `workflow.skipped`. |
+| `plan.yaml.workflow.active == tests` | Start TESTS `--strategy` — define test pyramid: verification tests (from DESIGN) + validation tests (from REQS acceptance criteria). |
+| `plan.yaml.workflow.active == produce`, none in-progress | Start PRODUCE on first planned TASK |
+| `plan.yaml.workflow.active == produce`, tasks `in-progress` | Resume PRODUCE — show current task, propose continuation |
+| `plan.yaml.workflow.active == review` | Start REVIEW — propose `/gse:review` (requires test evidence — will block if tests were skipped) |
+| `plan.yaml.workflow.active == fix` | Start FIX — propose `/gse:fix` |
+| `plan.yaml.workflow.active == deliver` | Start DELIVER — propose `/gse:deliver` (requires REQ→TST coverage for must-priority requirements) |
+| `plan.yaml.status == completed`, no compound | Start LC03 — propose `/gse:compound` |
 | Compound done | Propose next sprint — increment sprint number, transition to LC01 (`COLLECT` > `ASSESS` > `PLAN`) |
+
+**Post-activity protocol:** After each activity completes, the orchestrator updates `.gse/plan.yaml` per the **Sprint Plan Maintenance** protocol in the orchestrator (workflow transition, coherence evaluation, alerts by mode). See the orchestrator document for the full protocol.
 
 **"No sprint defined" sub-decision** (evaluated in order):
 1. If `it_expertise: beginner` and `current_sprint: 0` (first time) → start **Intent-First mode** (Step 7)

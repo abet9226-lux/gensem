@@ -104,5 +104,5 @@ traces:
 | REQ-002  | docs/requirements/REQ-002-logout.md     | done       | 1      |
 | REQ-003  | docs/requirements/REQ-003-register.md   | deprecated | 2      |
 | DES-001  | docs/design/DES-001-architecture.md     | done       | 1      |
-| TASK-001 | docs/sprints/sprint-01/plan.md#task-001  | done       | 1      |
+| TASK-001 | .gse/plan.yaml (tasks[]) + .gse/backlog.yaml | done       | 1      |
 ```

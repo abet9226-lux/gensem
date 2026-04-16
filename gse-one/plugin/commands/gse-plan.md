@@ -1,6 +1,6 @@
 ---
 name: "gse-plan"
-description: "Select backlog items for sprint, create sprint plan. Cross-cutting — callable at any abstraction level."
+description: "Select backlog items for sprint, create/update sprint plan in `.gse/plan.yaml`. Cross-cutting — callable at any abstraction level."
 ---
 
 
@@ -13,18 +13,18 @@ Arguments: $ARGUMENTS
 | Flag / Sub-command | Description |
 |--------------------|-------------|
 | (no args)          | Default to `--strategic` if no sprint exists, `--tactical` otherwise |
-| `--strategic`      | Sprint-level planning: select items from pool, create sprint |
-| `--tactical`       | Task-level planning: reorder, adjust scope, refine within current sprint |
+| `--strategic`      | Sprint-level planning: select items from pool, create `.gse/plan.yaml` |
+| `--tactical`       | Task-level planning: reorder, adjust scope, refine within active plan |
 | `--help`           | Show this command's usage summary |
 
 ## Prerequisites
 
 Before executing, read:
 1. `.gse/backlog.yaml` — all work items (pool and sprint-assigned)
-2. `.gse/status.yaml` — current sprint number and state
+2. `.gse/status.yaml` — current sprint number and lifecycle state
 3. `.gse/profile.yaml` — user preferences (decision involvement, preferred verbosity)
 4. `.gse/config.yaml` — project configuration (complexity budget, GitHub settings)
-5. `docs/sprints/sprint-{NN}/plan.md` — existing plan for current sprint (if any)
+5. `.gse/plan.yaml` — existing living plan for the current sprint (if any)
 
 ## Workflow
 
@@ -36,7 +36,7 @@ Used to create a new sprint by selecting items from the backlog pool.
 
 If this is NOT the first sprint (`current_sprint > 1`):
 
-1. **Velocity calibration** — Read the previous sprint's results from `docs/sprints/sprint-{NN-1}/`:
+1. **Velocity calibration** — Read the previous sprint's archive from `docs/sprints/sprint-{NN-1}/plan-summary.md`:
    - How many complexity points were planned vs delivered?
    - Use actual velocity to calibrate this sprint's budget (Inform tier)
    - Example: "Last sprint you planned 10 points and delivered 8. I recommend a budget of 8 for this sprint."
@@ -106,6 +106,21 @@ For each selected item:
 
 Increment sprint number in `status.yaml`.
 
+**Initialize workflow.expected based on project mode:**
+
+| Mode | workflow.expected |
+|------|-------------------|
+| **Full** | `[collect, assess, plan, reqs, design, tests, produce, review, deliver]` |
+| **Full (design skipped)** | `[collect, assess, plan, reqs, tests, produce, review, deliver]` |
+| **Lightweight** | `[plan, produce, deliver]` |
+| **Micro** | (no plan.yaml is created in Micro mode) |
+
+Conditional insertions:
+- Insert `preview` after `design` if `config.yaml → project.domain` is `web` or `mobile`
+- Insert `fix` after `review` if review produces findings (recorded when review completes)
+
+LC03 activities (`compound`, `integrate`) are tracked in `status.yaml`, not in this sprint's `plan.yaml`.
+
 #### Step 6 — Git Integration
 
 1. **Create sprint integration branch**: `gse/sprint-{NN}/integration` from `main`
@@ -120,58 +135,127 @@ Increment sprint number in `status.yaml`.
 | `doc`        | `gse/sprint-{NN}/docs/{short-name}` |
 | `config`     | `gse/sprint-{NN}/chore/{short-name}` |
 
-3. **Update TASK entries** with:
+3. **Update TASK entries** in `backlog.yaml` with:
    ```yaml
    git:
      branch: "gse/sprint-02/feat/rate-limiting"
      branch_status: planned  # planned | created | merged | abandoned
    ```
 
+4. **Record branch name on each task** in `plan.yaml.tasks[].branch` for quick lookup during PRODUCE.
+
 Note: Branches are NOT created yet — only named. They are created when production starts on each task.
 
 #### Step 7 — Persist Plan
 
-Save the sprint plan to `docs/sprints/sprint-{NN}/plan.md`:
+Write the living sprint plan to `.gse/plan.yaml`:
 
 ```yaml
----
-id: PLN-{NNN}
-artefact_type: task
-title: "Sprint {NN} Plan"
+version: 1
+id: PLN-{NNN}                        # artefact ID for traceability
 sprint: {NN}
-status: draft
-created: {date}
-author: pair
----
+mode: full                           # full | lightweight | micro
+status: active                       # active | completed | abandoned
+
+goal: "Short sprint goal description"
+
+tasks:
+  - id: TASK-010
+    order: 1
+    complexity: M                    # S (1pt) | M (3pt) | L (5pt)
+    branch: "gse/sprint-{NN}/feat/rate-limiting"
+  - id: TASK-011
+    order: 2
+    complexity: S
+    branch: "gse/sprint-{NN}/feat/notifications"
+
+budget:
+  total: 8                           # sum of selected complexity points
+  consumed: 0                        # updated as tasks complete
+  remaining: 8
+
+workflow:
+  expected: [collect, assess, plan, reqs, design, tests, produce, review, deliver]
+  completed:
+    - activity: collect              # if COLLECT already ran in LC01
+      completed_at: "{iso8601}"
+      notes: "{short summary}"
+    - activity: assess               # if ASSESS already ran in LC01
+      completed_at: "{iso8601}"
+      notes: "{short summary}"
+    - activity: plan                 # this run
+      completed_at: "{iso8601}"
+  active: reqs                       # next activity to execute
+  pending: [design, tests, produce, review, deliver]
+  skipped:
+    - activity: preview              # if project_domain is not web/mobile
+      reason: "project_domain: {value} — not applicable"
+
+coherence:
+  last_evaluated: "{iso8601}"
+  scope_changes: []                  # populated at each transition if scope drifts
+  alerts: []                         # active alerts; cleared when resolved
+
+risks:
+  - description: "{risk description}"
+    likelihood: low | medium | high
+    mitigation: "{mitigation plan}"
+
+created: "{iso8601}"
+updated: "{iso8601}"
 ```
 
-Content includes:
-- Sprint goal (one sentence)
-- Selected items with complexity and branch assignments
-- Total complexity vs budget
-- Dependencies between items (execution order)
-- Definition of done for the sprint
+**workflow.completed initialization:**
+- Pre-populate with COLLECT and ASSESS if LC01 already ran (read their timestamps from `status.yaml.last_activity_timestamp` or the checkpoint trail).
+- Always append the current PLAN activity as completed.
 
-Present the plan for user approval (Gate). Set status to `approved` once confirmed.
+**workflow.active:** Set to the next expected activity after PLAN — typically `reqs` in Full mode, `produce` in Lightweight mode.
+
+Present the plan for user approval (Gate). Set `status: active` once confirmed.
+
+Also update `status.yaml` cursor fields:
+- `last_activity: plan`
+- `last_activity_timestamp: {now}`
+- `current_sprint: {NN}`
 
 ### Tactical Planning (`--tactical`)
 
-Used to adjust an existing sprint without changing its scope fundamentally.
+Used to adjust an existing sprint without changing its scope fundamentally. Operates on `.gse/plan.yaml`.
 
 #### Step 1 — Show Current Sprint State
 
-Display current sprint items with their statuses and progress.
+Read `.gse/plan.yaml` and display:
+- Goal, mode, and budget (total / consumed / remaining)
+- Tasks with their order, complexity, and current status (from `backlog.yaml`)
+- Current workflow position: `active` activity, `pending` queue, `completed` history
+- Active coherence alerts, if any
 
 #### Step 2 — Available Actions
 
-- **Reorder** — Change execution priority of planned items
-- **Split** — Break a large item into smaller sub-tasks
-- **Defer** — Move an item back to pool (reduce scope)
-- **Add** — Pull an item from pool into the sprint (with budget check)
-- **Rename branch** — Update a task's branch name
+- **Reorder** — Change execution priority of planned items (`plan.yaml.tasks[].order`)
+- **Split** — Break a large item into smaller sub-tasks (update both `backlog.yaml` and `plan.yaml.tasks`)
+- **Defer** — Move an item back to pool (remove from `plan.yaml.tasks`, update `backlog.yaml`)
+- **Add** — Pull an item from pool into the sprint (add to `plan.yaml.tasks`, with budget check)
+- **Rename branch** — Update a task's `branch` field in both files
 
 #### Step 3 — Apply Changes
 
-Update `.gse/backlog.yaml` and `docs/sprints/sprint-{NN}/plan.md` with changes.
+Update `.gse/plan.yaml` (tasks, budget, `updated` timestamp) and `.gse/backlog.yaml` (TASK statuses).
 
-Re-run complexity budget check after any additions.
+If the change alters scope, append an entry to `plan.yaml.coherence.scope_changes`:
+
+```yaml
+scope_changes:
+  - timestamp: "{iso8601}"
+    trigger: tactical-replan
+    description: "{what changed}"
+    budget_impact: "{+/- N pts}"
+```
+
+Re-run the complexity budget check after any additions. If over budget, apply the Hard guardrail from Strategic Step 4.
+
+### Notes
+
+- `.gse/plan.yaml` is the **single source of truth** for sprint planning state. `backlog.yaml` remains the authority for TASK data.
+- The orchestrator maintains `plan.yaml` (workflow, budget, coherence) at every activity transition — see the Plan Update Protocol in the orchestrator.
+- At DELIVER, a read-only snapshot is archived to `docs/sprints/sprint-{NN}/plan-summary.md` and `plan.yaml.status` is set to `completed`.

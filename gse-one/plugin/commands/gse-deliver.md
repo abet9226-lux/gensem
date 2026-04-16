@@ -191,14 +191,17 @@ Remove backup tags older than `backup_retention_days` (default: 30):
 
 ### Step 9 — Finalize
 
-1. Update `status.yaml`:
+1. **Generate sprint plan snapshot** — Read `.gse/plan.yaml` and produce a read-only archive at `docs/sprints/sprint-{NN}/plan-summary.md` using the `plan-summary.md` template. The snapshot contains: goal, mode, budget (total/consumed/remaining), tasks delivered (from `backlog.yaml`), activity flow (from `workflow.completed` + `workflow.skipped` with reasons), scope changes (from `coherence.scope_changes`), coherence summary (alerts raised and whether resolved), and risks. This file is **read-only** — never read by the orchestrator, used only for human reference, COMPOUND process-deviation analysis, and sprint history.
+2. Set `plan.yaml.status: completed` and update `plan.yaml.updated` to the current timestamp.
+3. Update `status.yaml`:
    - `last_activity: deliver`
    - `last_activity_timestamp: {now}`
    - `lifecycle_phase: LC03` (transition to capitalization)
    - **Refresh all 8 health dimension scores** using the same formulas as review (final snapshot for the delivered sprint). This ensures the dashboard health radar reflects the state at delivery time.
-2. Report delivery summary:
+4. Report delivery summary:
    - Tasks delivered
    - Version tagged (if applicable)
    - Branches cleaned
+   - Plan snapshot: `docs/sprints/sprint-{NN}/plan-summary.md`
    - Next step: propose `/gse:compound`
-3. **Regenerate dashboard** — Run `python3 "$(cat ~/.gse-one)/tools/dashboard.py"` to update `docs/dashboard.html` with delivery status and release info.
+5. **Regenerate dashboard** — Run `python3 "$(cat ~/.gse-one)/tools/dashboard.py"` to update `docs/dashboard.html` with delivery status and release info.

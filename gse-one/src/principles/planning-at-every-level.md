@@ -16,7 +16,7 @@ Planning is not overhead — it is the mechanism by which complexity is managed,
    | Level | Scope | Artefact | Frequency |
    |-------|-------|----------|-----------|
    | **Project** | Overall goals, epics, milestones | `docs/project-plan.md` | Created at project start, revised per sprint |
-   | **Sprint** | Sprint goals, selected backlog items | `docs/sprints/sprint-NN/plan.md` | Once per sprint start |
+   | **Sprint** | Sprint goals, selected backlog items, workflow tracking | `.gse/plan.yaml` (living) → `docs/sprints/sprint-NN/plan-summary.md` (archive at delivery) | Created at sprint start, maintained continuously, archived at delivery |
    | **Task** | Implementation approach for a single task | Inline in task artefact or commit message | Before each task |
    | **Micro** | Step-by-step approach within a task | Agent's reasoning (visible on request) | Continuous |
 
@@ -27,7 +27,7 @@ Planning is not overhead — it is the mechanism by which complexity is managed,
    - **Risks** (what could go wrong, mitigation)
    - **Complexity cost** (P10 budget impact)
 
-3. **Plan visibility** — Plans at the Project and Sprint levels are always artefacts (P3) with full frontmatter. Task-level plans are recorded in the task's artefact or as structured commit messages. Micro-level plans are internal to the agent but can be surfaced on request.
+3. **Plan visibility** — Project plans are always artefacts (P3) with full frontmatter. Sprint-level plans are stored in `.gse/plan.yaml` during the sprint (machine-readable YAML, not Markdown) and archived to `docs/sprints/sprint-{NN}/plan-summary.md` at delivery. Task-level plans are recorded in the task's artefact or as structured commit messages. Micro-level plans are internal to the agent but can be surfaced on request.
 
 4. **Re-planning triggers** — The agent MUST propose re-planning when:
    - A task takes more than 2x the estimated effort
@@ -38,7 +38,7 @@ Planning is not overhead — it is the mechanism by which complexity is managed,
 
 5. **Plan acceptance** — Sprint and Project plans are Gate-tier decisions (P4, P7). The human must approve them before execution begins. Task-level plans are Inform-tier: the agent states the plan and proceeds unless the human objects.
 
-6. **No plan survives contact** — Plans are living documents. The agent updates plans as reality unfolds, noting deviations and their causes. A plan that was changed 5 times is more valuable than a plan that was ignored.
+6. **No plan survives contact** — Plans are living documents. The agent updates plans as reality unfolds, noting deviations and their causes. A plan that was changed 5 times is more valuable than a plan that was ignored. The orchestrator maintains `.gse/plan.yaml` as a living document — updating workflow state, budget, and coherence at each activity transition. Scope deviations and their causes are recorded in `coherence.scope_changes`; non-blocking alerts (budget pressure, scope drift, velocity risk) are surfaced at each transition and cleared when resolved.
 
 7. **Planning debt** — If planning is skipped under time pressure, the agent records a planning debt item in the sprint backlog for the next sprint's retrospective.
 

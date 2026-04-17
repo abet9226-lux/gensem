@@ -1,9 +1,8 @@
 status: active
 current_sprint: 0
 workflow:
-  active: deliver
+  active: compound
   pending:
-    - compound
     - integrate
   completed:
     - activity: collect
@@ -33,6 +32,9 @@ workflow:
     - activity: fix
       completed_at: "2026-04-17T00:00:00Z"
       notes: "REQ-1 revised to remove macOS requirement for sprint 0."
+    - activity: deliver
+      completed_at: "2026-04-17T00:00:00Z"
+      notes: "Integrated feature branches into main and wrote plan-summary.md"
   skipped:
     - activity: preview
       skipped_at: "2026-04-17T00:00:00Z"

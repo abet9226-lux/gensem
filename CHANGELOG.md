@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.4] - 2026-04-17
+
+Layers impacted: **spec** (moderate), **design** (moderate), **source** (minor)
+
+### Changed
+- Lightweight `workflow.expected` aligned to `[plan, reqs, produce, deliver]` across all sources (was `[plan, produce, deliver]` in `plan.md` and design §10.1)
+- FIX activity documented as conditional: `[FIX]` notation in LC02 sequence, glossary, ASCII diagram (spec); post-REVIEW mutation protocol added to design §10.1 and §5.14 decision table
+- Complexity assessment: 7 structural signals (was 8) — source file count reclassified as trivialiy pre-filter for Micro detection, not a complexity signal (spec glossary, design §5.5, `go.md`, orchestrator)
+- File inventory updated: 23 skills (was 22), 19 templates (was 15), 57 total files (was 52) in design §3.1, §11, §12
+- Test review tier `[IMPL]` explicitly named in design §5.11
+- Document versioning references removed from spec and design (version history consolidated in this file)
+- Design §11.1 Evolution table removed (version history belongs in CHANGELOG.md)
+- Design §5 renamed from "New Skill Designs (v0.6)" to "Skill Designs"
+- Design §2, §9: removed "Unchanged from v0.2" cross-references to old document versions
+
+### Fixed
+- `plan_status` field: confirmed absent from both documents (removed in v0.20.1, no residual references)
+
 ## [0.17.1] - 2026-04-14
 
 Layers impacted: **spec** (moderate), **design** (minor), **production** (minor)
@@ -259,6 +277,7 @@ Layers impacted: **spec** (major), **design** (moderate), **production** (modera
 - First specification and implementation design drafts
 - Requirements document
 
+[0.20.4]: https://github.com/nicolasguelfi/gensem/compare/v0.20.3...v0.20.4
 [0.17.0]: https://github.com/nicolasguelfi/gensem/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/nicolasguelfi/gensem/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/nicolasguelfi/gensem/compare/v0.14.0...v0.15.0

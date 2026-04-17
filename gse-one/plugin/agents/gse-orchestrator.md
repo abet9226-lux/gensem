@@ -391,7 +391,7 @@ Both files are written atomically at each transition — complementary, never du
 - **Micro mode** (trivial projects — scripts, one-off tasks, experiments): PRODUCE > DELIVER, direct commit, 1 state file (`.gse/status.yaml`), Gate only (security/destructive), no health, no budget, no REQS/TESTS guardrails. Planning state: **no `plan.yaml`** — orchestrator falls back to file-existence checks. For quick scripts and one-off tasks.
 - **Adopt mode** (existing project): non-destructive scan, sprint 0 baseline, optional annotation. Mode is determined by complexity assessment on first `/gse:go` after adoption.
 
-**Mode selection:** Modes are determined by a **complexity assessment** (structural signal scan: dependencies, persistence, entry points, multi-component, CI/CD, git maturity, tests). The assessment recommends a mode, presented as a Gate decision — the user confirms or overrides. File count is one signal among many, not the sole criterion. See `/gse:go` Step 6 for the full protocol.
+**Mode selection:** Modes are determined by a **complexity assessment** (7 structural signals: dependencies, persistence, entry points, multi-component, CI/CD, git maturity, tests). The assessment recommends a mode, presented as a Gate decision — the user confirms or overrides. Source file count is not a complexity signal — it is used only as a trivialiy pre-filter for Micro mode detection. See `/gse:go` Step 6 for the full protocol.
 
 ## Methodology Feedback
 

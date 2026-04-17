@@ -1,6 +1,5 @@
 # GSE-One — Generic Software Engineering One
 
-**Version:** see `VERSION` file — **Changelog:** see `CHANGELOG.md`  
 **Aliases:** `gse`, `gse-one`, `gseone`
 
 > **Audience:** This document is the **technical specification** for GSE-One, intended for implementers and advanced users who want to understand the methodology in detail. If you are a **new user**, you don't need to read this — just type `/gse:go` and the agent will guide you through everything adaptively.
@@ -2549,7 +2548,7 @@ The health dashboard adapts: disabled dimensions are excluded from the score com
 |-------|------|--------------|-------|
 | **LC00** | Onboarding | `HUG` | Run once, update as needed. Initializes `.gse/` and verifies git. |
 | **LC01** | Discovery & Planning | `GO > COLLECT > ASSESS > PLAN` | PLAN creates sprint branch. COLLECT can scan external sources. |
-| **LC02** | Development Sprint | `REQS > DESIGN > PREVIEW > TESTS > PRODUCE > REVIEW > FIX > DELIVER` | PRODUCE creates feature branches + worktrees. REVIEW uses branch diffs. DELIVER merges, tags, and archives `.gse/plan.yaml` to `plan-summary.md`. |
+| **LC02** | Development Sprint | `REQS > DESIGN > PREVIEW > TESTS > PRODUCE > REVIEW > [FIX] > DELIVER` | PRODUCE creates feature branches + worktrees. REVIEW uses branch diffs. `[FIX]` is conditionally inserted by the orchestrator after REVIEW only if findings with severity HIGH or MEDIUM exist — otherwise omitted. DELIVER merges, tags, and archives `.gse/plan.yaml` to `plan-summary.md`. |
 | **LC03** | Capitalization | `COMPOUND > INTEGRATE` | Post-sprint learning loop. Runs on `main` after delivery. Natural moment for proactive LEARN proposals. |
 
 > **Note on PLAN:** PLAN is **not** part of the LC02 sequence. It is cross-cutting (P5). The orchestrator maintains `.gse/plan.yaml` as a living document throughout all phases, monitoring coherence non-blockingly at each activity transition (budget pressure, scope drift, velocity risk — all Inform-tier). The user can invoke `/gse:plan --tactical` at any time to explicitly re-plan.
@@ -2585,12 +2584,12 @@ LC00 (once)
                                        v
 ┌─── LC02: Development Sprint ────────────────────────────┐
 │    REQS > DESIGN > PREVIEW > TESTS >                     │
-│    PRODUCE > REVIEW > FIX > DELIVER                     │
+│    PRODUCE > REVIEW > [FIX] > DELIVER                   │
 │                                                          │
 │    plan.yaml updated at each transition (non-blocking)   │
 │    PRODUCE: branch + worktree per task                   │
 │    REVIEW: diff-based on feature branch                  │
-│    FIX: fix branch from reviewed branch                  │
+│    [FIX]: conditional — inserted if HIGH/MEDIUM findings │
 │    DELIVER: merge → sprint → main, tag, cleanup,         │
 │             archive plan.yaml → plan-summary.md          │
 │                                                          │
@@ -2856,11 +2855,11 @@ If you are new to GSE-One, these 20 concepts form the minimum vocabulary to get 
 | **Code coverage** | Percentage of code exercised by tests — tracked as a health sub-dimension |
 | **Spike** | Exploratory experiment created via `/gse:task --spike`. Complexity-boxed (max 3 points), non-deliverable (branch deleted after completion), bypasses REQS/TESTS guardrails. Must produce a DEC- artefact documenting question, approach, and answer. If reusable code emerges, a normal TASK is created |
 | **Acceptance criteria** | Measurable conditions attached to a requirement, expressed in Given/When/Then (BDD) format. These criteria ARE the specification for validation tests — each criterion generates at least one TST- artefact |
-| **Lifecycle phases (LC00–LC03)** | The four phases of a GSE-One project cycle: LC00 (onboarding — `/gse:hug`), LC01 (discovery & planning — `COLLECT` > `ASSESS` > `PLAN`), LC02 (development — `REQS` > `DESIGN` > `PREVIEW` > `TESTS` > `PRODUCE` > `REVIEW` > `FIX` > `DELIVER`), LC03 (capitalization — `COMPOUND` > `INTEGRATE`) |
+| **Lifecycle phases (LC00–LC03)** | The four phases of a GSE-One project cycle: LC00 (onboarding — `/gse:hug`), LC01 (discovery & planning — `COLLECT` > `ASSESS` > `PLAN`), LC02 (development — `REQS` > `DESIGN` > `PREVIEW` > `TESTS` > `PRODUCE` > `REVIEW` > `[FIX]` > `DELIVER` — where `[FIX]` is conditionally inserted if REVIEW produces HIGH/MEDIUM findings), LC03 (capitalization — `COMPOUND` > `INTEGRATE`) |
 | **Intent-first mode** | Special onboarding flow for beginner users on their first project (`current_sprint: 0`). The agent elicits intent conversationally ("What would you like to build?") before introducing any technical structure |
 | **Supervised mode** | When `decision_involvement: supervised` in the profile, ALL technical choices during PRODUCE are escalated to Gate-tier decisions — the agent presents options and waits for confirmation |
 | **Micro mode** | Minimal lifecycle for trivial projects (scripts, one-off tasks): `PRODUCE` > `DELIVER`, direct commit, 1 state file, no REQS/TESTS guardrails, no health tracking. Selected by complexity assessment, not file count |
-| **Complexity assessment** | Structural analysis performed by the orchestrator during `/gse:go` to recommend a project mode (Micro/Lightweight/Full). Scans package manifests, persistence, entry points, multi-component structure, CI/CD, git maturity, and test presence. Presented as a Gate decision — the user confirms or overrides |
+| **Complexity assessment** | Structural analysis performed by the orchestrator during `/gse:go` to recommend a project mode (Micro/Lightweight/Full). Scans 7 structural complexity signals: (1) dependencies (direct dep count from manifests), (2) persistence (ORM, SQL, DB config), (3) entry points (routes, CLI commands), (4) multi-component (multiple manifests, monorepo), (5) existing tests (test directories/files), (6) CI/CD (workflow files, Docker), (7) git maturity (commits, branches, contributors). Source file count is not a complexity signal — it is used only as a trivialiy pre-filter for Micro mode detection. Presented as a Gate decision — the user confirms or overrides |
 | **Stale sprint** | A sprint where no TASK has progressed for more than `lifecycle.stale_sprint_sessions` sessions (default: 3). Triggers a Gate decision: resume, partial delivery, discard, or discuss |
 | **Design debt** | Health sub-dimension measuring accumulated design-level issues. Computed from review findings with the architect perspective: 10 − (HIGH × 2.0 + MEDIUM × 1.0 + LOW × 0.5), floor 0 |
 | **Regression test** | A test verifying that previously passing functionality still works after new changes. During `/gse:review`, the full test suite is compared against the previous sprint's results — newly failing tests are flagged `[REGRESSION]` with severity HIGH |

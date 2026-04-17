@@ -112,7 +112,7 @@ Increment sprint number in `status.yaml`.
 |------|-------------------|
 | **Full** | `[collect, assess, plan, reqs, design, tests, produce, review, deliver]` |
 | **Full (design skipped)** | `[collect, assess, plan, reqs, tests, produce, review, deliver]` |
-| **Lightweight** | `[plan, produce, deliver]` |
+| **Lightweight** | `[plan, reqs, produce, deliver]` |
 | **Micro** | (no plan.yaml is created in Micro mode) |
 
 Conditional insertions:

@@ -1,19 +1,12 @@
 # GSE-One — Implementation Design Document
 
-**Version:** see `VERSION` file — **Changelog:** see `CHANGELOG.md`  
 **Input:** `gse-one-spec.md`, implementation inspection and restructuration pass
-
----
-
-For version history and evolution details, see `CHANGELOG.md`.
 
 ---
 
 ## 2. Plugin System Comparison
 
-*Unchanged from v0.2 — see that document for the full comparison table.*
-
-**New addition:** Both environments support git operations:
+Both environments support git operations:
 - Claude Code: via `Bash` tool (git commands) and `EnterWorktree`/`ExitWorktree` tools
 - Cursor: via terminal commands and Composer agent (multi-file editing in worktree context)
 
@@ -42,14 +35,14 @@ gse-one/
 │   │   ├── ux-advocate.md
 │   │   ├── guardrail-enforcer.md
 │   │   └── devil-advocate.md
-│   └── templates/                       # 15 templates (same as v0.7)
+│   └── templates/                       # 19 templates
 │
 ├── plugin/                              # Single deployable directory (both platforms)
 │   ├── .claude-plugin/plugin.json       # Claude Code manifest
 │   ├── .cursor-plugin/plugin.json       # Cursor manifest
 │   ├── skills/                          # 23 skills (shared)
 │   ├── agents/                          # 9 agents (shared, incl. orchestrator)
-│   ├── templates/                       # 15 templates (shared)
+│   ├── templates/                       # 19 templates (shared)
 │   ├── rules/
 │   │   └── gse-orchestrator.mdc      # Cursor-only (ignored by Claude)
 │   ├── hooks/
@@ -576,7 +569,7 @@ Git-specific alerts:
 
 ---
 
-## 5. New Skill Designs (v0.6)
+## 5. Skill Designs
 
 ### 5.1 `/gse:learn` — Knowledge Transfer Skill
 
@@ -813,8 +806,8 @@ At start of /gse:go, when no sprint is defined:
 
 1. If `.gse/config.yaml` exists with `lifecycle.mode` → use stored mode
 2. Otherwise → run complexity assessment:
-   - Scan structural signals: dependencies (manifest), persistence (ORM/SQL/DB config), entry points, multi-component, tests, CI/CD, git maturity, source file count
-   - Apply rules: no manifest + no git + ≤2 files → Micro; persistence/multi-component/CI/deps>10/entry>10 → Full; otherwise → Lightweight
+   - Scan 7 structural complexity signals: dependencies (manifest), persistence (ORM/SQL/DB config), entry points, multi-component, tests, CI/CD, git maturity
+   - Apply rules: no manifest + no git + ≤2 source files (trivialiy pre-filter) → Micro; persistence/multi-component/CI/deps>10/entry>10 → Full; otherwise → Lightweight
    - Present as Gate decision with rationale
    - Store chosen mode in `config.yaml → lifecycle.mode`
 
@@ -1018,12 +1011,12 @@ The canonical run produces TCP-NNN campaign, `test_evidence` update on the TASK,
 ```
 ```
 
-### 5.11 `/gse:review` — Devil's Advocate Agent (P16)
+### 5.11 `/gse:review` — Devil's Advocate Agent (P16) — `[IMPL]` Tier
 
 ```markdown
-### Devil's Advocate (added to review skill)
+### Devil's Advocate — [IMPL] review tier (added to review skill)
 
-After the standard quality review, activate the devil-advocate agent:
+After the standard quality review (the `[IMPL]` tier per spec §6.5), activate the devil-advocate agent:
 
 1. **Scope:** Only the agent's own productions from this sprint (not user-written code)
 
@@ -1172,7 +1165,8 @@ When `/gse:go` is invoked:
 | Sprint, plan not approved | Resume PLAN |
 | Sprint, tasks in-progress | Resume PRODUCE on current task |
 | Sprint, tasks done, not reviewed | Start REVIEW |
-| Sprint, review done, fixes pending | Start FIX |
+| Sprint, review done, HIGH/MEDIUM findings exist | Start FIX (conditionally inserted by orchestrator) |
+| Sprint, review done, no HIGH/MEDIUM findings | Skip FIX → Start DELIVER |
 | Sprint, all delivered | Start LC03: COMPOUND > INTEGRATE |
 | Sprint, compound done | Propose next sprint → LC01 |
 | Sprint stale (> `lifecycle.stale_sprint_sessions` sessions without progress) | Step 3 |
@@ -1546,9 +1540,7 @@ If this is the first session and git IS available but `git.strategy` is not set:
 
 ## 9. Marketplace & Distribution
 
-*Unchanged from v0.2 — see that document for Claude Code marketplace, Cursor marketplace, and installation flow.*
-
-**Note:** The `marketplace.json` install path is `"plugin"` (not `"dist/claude"`), reflecting the mono-plugin architecture.
+The `marketplace.json` install path is `"plugin"` (not `"dist/claude"`), reflecting the mono-plugin architecture.
 
 ---
 
@@ -1580,15 +1572,16 @@ If this is the first session and git IS available but `git.strategy` is not set:
 | Mode | workflow.expected |
 |------|-------------------|
 | Full | `[collect, assess, plan, reqs, design, tests, produce, review, deliver]` (plus `preview` after `design` for web/mobile) |
-| Lightweight | `[plan, produce, deliver]` |
+| Lightweight | `[plan, reqs, produce, deliver]` |
 | Micro | no `plan.yaml` — orchestrator falls back to file-existence checks |
 
 **Maintenance** — After every activity transition, the orchestrator executes the **Sprint Plan Maintenance** protocol (defined in `gse-orchestrator.md`):
 1. Move current activity from `workflow.active` to `workflow.completed` (with `completed_at` + notes).
-2. Pop the next item from `workflow.pending` → `workflow.active`; record conditional skips in `workflow.skipped` with reason.
-3. Evaluate non-blocking coherence: `budget_pressure` (>80% consumed with tasks remaining), `significant_scope_drift` (>50% tasks changed), `velocity_risk` (produce phase only).
-4. React by mode: Full → Inform; Lightweight → one-line Inform; Micro → silent.
-5. Update `status.yaml` cursor fields (`last_activity`, `last_activity_timestamp`, `lifecycle_phase`).
+2. **Post-REVIEW mutation (conditional FIX insertion):** If the activity just completed is `review`: if `review.md` contains at least one finding with severity HIGH or MEDIUM → insert `fix` at the head of `workflow.pending`. If no such finding exists → do not insert `fix`; if `fix` was previously in `workflow.expected`, move it to `workflow.skipped` with `reason: "no review findings"`.
+3. Pop the next item from `workflow.pending` → `workflow.active`; record conditional skips in `workflow.skipped` with reason.
+4. Evaluate non-blocking coherence: `budget_pressure` (>80% consumed with tasks remaining), `significant_scope_drift` (>50% tasks changed), `velocity_risk` (produce phase only).
+5. React by mode: Full → Inform; Lightweight → one-line Inform; Micro → silent.
+6. Update `status.yaml` cursor fields (`last_activity`, `last_activity_timestamp`, `lifecycle_phase`).
 
 **Archival** — At DELIVER Step 9, the orchestrator reads `.gse/plan.yaml`, generates `docs/sprints/sprint-{NN}/plan-summary.md` (using the `plan-summary.md` template), and sets `plan.yaml.status: completed`. The snapshot is read-only — never consumed by the orchestrator, only used for human reference and COMPOUND process-deviation analysis.
 
@@ -1611,28 +1604,14 @@ If this is the first session and git IS available but `git.strategy` is not set:
 
 ## 11. Generator Script Design
 
-### 11.1 Evolution
-
-| Version | Principles | Activities | Cursor rules | Templates |
-|---------|-----------|------------|-------------|-----------|
-| v0.2 | 7 | 19 | 5+2 | 10 |
-| v0.4 | 9 (+P12, P13) | 19 | 6+3 | 12 |
-| v0.6a | 10 (+P14) | 20 (+learn) | 7+3 | 14 |
-| v0.6b | 10 | 21 (+backlog) | 7+3 | 14 |
-| v0.6c | 12 (+P15, P16) | 21 | 9+3 | 15 |
-| v0.7 | 16 (all P1-P16) | 21 | 9+3 | 15 |
-| **v0.8** | **16** | **22** | **1 (consolidated)** | **15** |
-
-Note: Agents now 9 (8 specialized + gse-orchestrator). Generator ~400 lines.
-
-### 11.2 Generation Steps
+### 11.1 Generation Steps
 
 | Step | Input | Output | Shared? |
 |------|-------|--------|---------|
 | 1 | `src/agents/gse-orchestrator.md` (body) | `plugin/agents/gse-orchestrator.md` + `plugin/rules/gse-orchestrator.mdc` | Body identical, frontmatter differs |
 | 2 | `src/activities/*.md` (23) | `plugin/skills/<name>/SKILL.md` | Shared |
 | 3 | `src/agents/*.md` (8 specialized) | `plugin/agents/<name>.md` | Shared |
-| 4 | `src/templates/*` (15) | `plugin/templates/*` | Shared |
+| 4 | `src/templates/*` (19) | `plugin/templates/*` | Shared |
 | 5 | Constants | `plugin/.claude-plugin/plugin.json` + `plugin/.cursor-plugin/plugin.json` | Two manifests |
 | 6 | Shared shell commands | `plugin/hooks/hooks.claude.json` + `plugin/hooks/hooks.cursor.json` | Same logic, different format |
 | 7 | — | `plugin/settings.json` | Claude-only |
@@ -1643,16 +1622,16 @@ Note: Agents now 9 (8 specialized + gse-orchestrator). Generator ~400 lines.
 
 | Category | Shared | Claude-only | Cursor-only | Source |
 |----------|--------|-------------|-------------|--------|
-| Skills | 22 | — | — | 22 activities |
+| Skills | 23 | — | — | 23 activities |
 | Agents | 9 (incl. orchestrator) | — | — | 9 agents |
-| Templates | 15 | — | — | 15 templates |
+| Templates | 19 | — | — | 19 templates |
 | Manifest | — | 1 | 1 | — |
 | Rules | — | — | 1 (.mdc) | from orchestrator |
 | Hooks | — | 1 | 1 | shared constants |
 | Settings | — | 1 | — | — |
-| **Total** | **46** | **3** | **3** | **46 sources** |
+| **Total** | **51** | **3** | **3** | **51 sources** |
 
-Grand total: **52 files**. Generator: ~400 lines.
+Grand total: **57 files**. Generator: ~400 lines.
 
 ---
 
@@ -1718,7 +1697,3 @@ Grand total: **52 files**. Generator: ~400 lines.
 | 8 | How to handle contextual tip frequency? Too many tips = annoying, too few = useless. | User experience | Max 1 tip per activity step. User can disable via HUG. Track and adapt. |
 | 9 | Should external source shallow clones be cached or re-cloned each time? | Performance | Cache in `.gse/cache/` with TTL. Clean on `/gse:deliver`. |
 | 10 | How to handle state recovery when user manually breaks `.gse/` or deletes branches? | Robustness | Best-effort reconstruction from git history. Warn, don't crash. |
-
-
-
-For version history, see `CHANGELOG.md`.

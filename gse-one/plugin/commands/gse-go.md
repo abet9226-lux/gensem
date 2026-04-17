@@ -171,7 +171,7 @@ If the last activity ended with an error or incomplete state:
 
 #### Step 6.1 — Scan Structural Signals
 
-Evaluate the project using these signals (each takes <1 second):
+Evaluate the project using these 7 complexity signals (each takes <1 second):
 
 | Signal | How to detect | Result |
 |--------|--------------|--------|
@@ -182,15 +182,14 @@ Evaluate the project using these signals (each takes <1 second):
 | **Existing tests** | Test directories (`tests/`, `__tests__/`, `test/`), test files (`*.test.*`, `test_*.*`) | yes / no |
 | **CI/CD** | `.github/workflows/`, `.gitlab-ci.yml`, `Dockerfile`, `Jenkinsfile` | yes / no |
 | **Git maturity** | `git rev-list --count HEAD`, `git branch --list`, `git shortlog -sn` | commits, branches, contributors |
-| **Source files** | Count files excluding deps/generated/IDE (Step 1 exclusion rules) | count |
 
 #### Step 6.2 — Determine Recommended Mode
 
-Apply these rules (first match wins):
+Apply these rules (first match wins). The first rule uses source file count as a **trivialiy pre-filter** (not a complexity signal):
 
 | Condition | Recommended mode |
 |-----------|-----------------|
-| No manifest AND no git history AND source files ≤ 2 | **Micro** |
+| No manifest AND no git history AND ≤ 2 source files (excluding deps/generated/IDE per Step 1 rules) | **Micro** |
 | Persistence OR multi-component OR CI/CD OR dependencies > 10 OR entry points > 10 | **Full** |
 | Existing tests AND (dependencies > 3 OR entry points > 3) | **Full** |
 | Otherwise | **Lightweight** |
